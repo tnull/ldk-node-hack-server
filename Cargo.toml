@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 ldk-node = { git = "https://github.com/tnull/ldk-node-hack.git", branch = "main" }
+tokio = { version = "1.38.0", features = ["full"] }

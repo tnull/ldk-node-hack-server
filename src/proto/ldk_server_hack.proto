@@ -1,0 +1,6 @@
+syntax = "proto3";
+package ldk_server_hack;
+
+message HelloRequest {
+  string name = 1;
+}

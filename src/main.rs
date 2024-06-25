@@ -21,10 +21,9 @@ fn main() {
 		std::process::exit(-1);
 	}
 
-	let config = utils::read_config_from_json(Path::new(&args[1])).unwrap();
-
 	let mut ldk_node_config = LdkNodeConfig::default();
-	ldk_node_config.storage_dir_path = args[1].clone();
+	let config = utils::read_config_from_json(Path::new(&args[1])).unwrap();
+	ldk_node_config.storage_dir_path = config.storage_dir_path;
 	ldk_node_config.log_level = config.log_level;
 	ldk_node_config.network = config.network;
 	ldk_node_config.listening_addresses = Some(vec![config.listening_addr.clone()]);

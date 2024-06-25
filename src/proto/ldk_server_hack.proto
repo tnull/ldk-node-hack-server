@@ -1,10 +1,10 @@
 syntax = "proto3";
 package ldk_server_hack;
 
-message GetNodeInfoRequest {
+message GetNodeStatusRequest {
 }
 
-message GetNodeInfoResponse {
+message GetNodeStatusResponse {
 
   string public_key = 1;
 

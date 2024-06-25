@@ -28,3 +28,90 @@ message BestBlock {
   uint32 height = 2;
 
 }
+
+// Retrieve a new on-chain/funding address.
+message OnchainReceiveRequest {
+}
+
+message OnchainRecevieResponse {
+
+  string address = 1;
+}
+
+// Send an on-chain payment to the given address.
+message OnchainSendRequest {
+
+  string address = 1;
+
+  optional uint64 amount_sats = 2;
+}
+
+message OnchainSendResponse {
+
+  string txid = 1;
+}
+
+
+// Return a BOLT11 invoice for the given amount, if specified.
+message Bolt11ReceiveRequest {
+
+  string description = 1;
+
+  uint64 expiry_secs = 2;
+
+  optional uint64 amount_msat = 3;
+}
+
+
+message Bolt11ReceiveResponse {
+
+  string invoice = 1;
+}
+
+// Send a payment for a BOLT11 invoice.
+message Bolt11SendRequest {
+
+  string invoice = 1;
+
+  optional uint64 amount_msat = 2;
+
+}
+
+message Bolt11SendResponse {
+
+  PaymentId payment_id = 1;
+}
+
+// Return a BOLT12 offer for the given amount, if specified.
+message Bolt12ReceiveRequest {
+
+  string description = 1;
+
+  optional uint64 amount_msat = 2;
+}
+
+message Bolt12ReceiveResponse {
+
+  string offer = 1;
+}
+
+// Send a payment for a BOLT11 invoice.
+message Bolt12SendRequest {
+
+  string offer = 1;
+
+  optional uint64 amount_msat = 2;
+
+  optional string payer_note = 3;
+}
+
+message Bolt12SendResponse {
+
+  PaymentId payment_id = 1;
+}
+
+// An identifier for making a payment.
+message PaymentId {
+
+  bytes data = 1;
+}

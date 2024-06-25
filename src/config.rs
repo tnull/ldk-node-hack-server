@@ -17,10 +17,16 @@ pub struct Config {
 
 impl Config {
 	pub fn new<P: AsRef<Path>>(storage_dir_path: P) -> Result<Self> {
-        let contents = std::fs::read_to_string(storage_dir_path.as_ref().join(CONFIG_FILE_NAME))?;
+		let contents = std::fs::read_to_string(storage_dir_path.as_ref().join(CONFIG_FILE_NAME))?;
 		let json_config: JsonConfig = serde_json::from_str(&contents)?;
-		let listening_addr = SocketAddress::from_str(&json_config.listening_addr)
-			.map_err(|e| anyhow!("Invalid listening_addr '{}': {e}", json_config.listening_addr))?;
+
+		Ok(Config::from(json_config))
+	}
+}
+
+impl From<JsonConfig> for Config {
+	fn from(json_config: JsonConfig) -> Self {
+		let listening_addr = SocketAddress::from_str(&json_config.listening_addr).unwrap();
 		let log_level = match json_config.log_level.to_lowercase().as_str() {
 			"gossip" => LogLevel::Gossip,
 			"trace" => LogLevel::Trace,
@@ -28,18 +34,14 @@ impl Config {
 			"info" => LogLevel::Info,
 			"warn" => LogLevel::Warn,
 			"error" => LogLevel::Error,
-			_ => return Err(anyhow!(
-				"Unsupported log level: {}. Use one of [gossip, trace, debug, info, warn, error] ",
-				json_config.log_level
-			)),
+			_ => panic!("Unsupported log level: {}", json_config.log_level),
 		};
-		let config = Config {
+		Config {
 			esplora_server_url: json_config.esplora_server_url,
 			listening_addr,
 			log_level,
 			network: json_config.network,
-		};
-		Ok(config)
+		}
 	}
 }
 
@@ -57,26 +59,25 @@ mod tests {
 
 	#[test]
 	fn test_parse_config_from_file() {
-        let storage_path = std::env::temp_dir();
+		let storage_path = std::env::temp_dir();
 
-        let json_config = r#"{
+		let json_config = r#"{
             "esplora_server_url": "localhost:3000",
             "listening_addr": "localhost:3001",
             "log_level": "info",
             "network": "regtest"
         }"#;
 
-        std::fs::write(storage_path.join(CONFIG_FILE_NAME), json_config).unwrap();
+		std::fs::write(storage_path.join(CONFIG_FILE_NAME), json_config).unwrap();
 
-        assert_eq!(
-            Config::new(storage_path).unwrap(),
-            Config {
-                esplora_server_url: "localhost:3000".to_string(),
-                listening_addr: SocketAddress::from_str("localhost:3001").unwrap(),
-                log_level: LogLevel::Info,
-                network: Network::Regtest,
-            }
-        );
+		assert_eq!(
+			Config::new(storage_path).unwrap(),
+			Config {
+				esplora_server_url: "localhost:3000".to_string(),
+				listening_addr: SocketAddress::from_str("localhost:3001").unwrap(),
+				log_level: LogLevel::Info,
+				network: Network::Regtest,
+			}
+		);
 	}
-
 }

@@ -1,12 +1,15 @@
+pub mod config;
+
 use std::sync::Arc;
 
-use tokio::signal::unix::SignalKind;
-use ldk_node::{Builder, Config as LdkNodeConfig, Event};
+use crate::service::NodeService;
 use hyper::server::conn::http1;
 use hyper_util::rt::TokioIo;
+use ldk_node::{Builder, Config as LdkNodeConfig, Event};
 use tokio::net::TcpListener;
-use crate::service::NodeService;
-use ldk_node_hack_server::config::Config;
+use tokio::signal::unix::SignalKind;
+
+use config::Config;
 
 mod service;
 

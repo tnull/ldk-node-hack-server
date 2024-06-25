@@ -1,0 +1,8 @@
+{
+    "esplora_server_url": "http://electrs:3002",
+    "listening_addr": "localhost:9735",
+    "log_level": "trace",
+    "network": "regtest",
+    "rest_service_addr": "0.0.0.0:3000",
+    "storage_dir_path": "/tmp/ldk-node-hack-server"
+}

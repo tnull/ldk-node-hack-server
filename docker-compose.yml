@@ -1,0 +1,81 @@
+version: '3'
+
+services:
+  bitcoin:
+    image: blockstream/bitcoind:24.1
+    platform: linux/amd64
+    command:
+      [
+        "bitcoind",
+        "-printtoconsole",
+        "-regtest=1",
+        "-rpcallowip=0.0.0.0/0",
+        "-rpcbind=0.0.0.0",
+        "-rpcuser=user",
+        "-rpcpassword=pass",
+        "-fallbackfee=0.000001"
+      ]
+    ports:
+      - "18443:18443"  # Regtest RPC port
+      - "18444:18444"  # Regtest P2P port
+    networks:
+      - bitcoin-electrs
+    healthcheck:
+      test: ["CMD", "bitcoin-cli", "-regtest", "-rpcuser=user", "-rpcpassword=pass", "getblockchaininfo"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  electrs:
+    image: blockstream/esplora:electrs-cd9f90c115751eb9d2bca9a4da89d10d048ae931
+    platform: linux/amd64
+    depends_on:
+      bitcoin:
+        condition: service_healthy
+    command:
+      [
+        "/app/electrs_bitcoin/bin/electrs",
+        "-vvvv",
+        "--timestamp",
+        "--jsonrpc-import",
+        "--cookie=user:pass",
+        "--network=regtest",
+        "--daemon-rpc-addr=bitcoin:18443",
+        "--http-addr=0.0.0.0:3002"
+      ]
+    ports:
+      - "3002:3002"
+    networks:
+      - bitcoin-electrs
+    healthcheck:
+        test: ["CMD", "curl", "http://localhost:3002/fee-estimates"]
+        interval: 5s
+        timeout: 10s
+        retries: 5
+
+  bitcoin-premine:
+    image: blockstream/bitcoind:24.1
+    platform: linux/amd64
+    depends_on:
+      bitcoin:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: [ "bash", "-c", 
+      "bitcoin-cli -regtest -rpcconnect=bitcoin -rpcuser=user -rpcpassword=pass createwallet dockerwallet && bitcoin-cli -regtest -rpcconnect=bitcoin -rpcuser=user -rpcpassword=pass generatetoaddress 1 $(bitcoin-cli -regtest -rpcconnect=bitcoin -rpcuser=user -rpcpassword=pass getnewaddress)"]
+    networks:
+      - bitcoin-electrs
+
+
+  ldk-node-hack-server:
+    depends_on:
+      electrs:
+        condition: service_healthy
+    build: .
+    ports:
+      - "3000:3000"
+    networks:
+      - bitcoin-electrs
+
+networks:
+  bitcoin-electrs:
+    driver: bridge

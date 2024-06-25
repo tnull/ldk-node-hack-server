@@ -1,12 +1,13 @@
-pub mod config;
+mod config;
+mod utils;
 
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use tokio::signal::unix::SignalKind;
 
 use ldk_node::{Builder, Config as LdkNodeConfig, Event};
 
-use config::Config;
+const CONFIG_FILE_NAME: &str = "config.json";
 
 fn main() {
 	let args: Vec<String> = std::env::args().collect();
@@ -16,13 +17,13 @@ fn main() {
 		std::process::exit(-1);
 	}
 
-	let config = Config::new(&args[1]).unwrap();
+	let config = utils::read_json_config(Path::new(&args[1]).join(CONFIG_FILE_NAME)).unwrap();
 
 	let mut ldk_node_config = LdkNodeConfig::default();
-	ldk_node_config.storage_dir_path = args[1];
+	ldk_node_config.storage_dir_path = args[1].clone();
 	ldk_node_config.log_level = config.log_level;
 	ldk_node_config.network = config.network;
-	ldk_node_config.listening_addresses = Some(vec![config.listening_addr]);
+	ldk_node_config.listening_addresses = Some(vec![config.listening_addr.clone()]);
 
 	let mut builder = Builder::from_config(ldk_node_config);
 	builder.set_esplora_server(config.esplora_server_url);

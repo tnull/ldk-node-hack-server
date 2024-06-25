@@ -1,17 +1,16 @@
 use ldk_node::lightning::chain::BestBlock;
 use ldk_node::Node;
-
-use http_body_util::Full;
-use hyper::body::{Bytes, Incoming};
-use hyper::service::Service;
-use hyper::{Request, Response};
 use prost::Message;
 
 use core::future::Future;
 use core::pin::Pin;
+use http_body_util::Full;
+use hyper::body::{Bytes, Incoming};
+use hyper::service::Service;
+use hyper::{Request, Response};
 use std::sync::Arc;
 
-use crate::protobuf_types::{self, GetNodeInfoResponse};
+use crate::protobuf_types::{self, GetNodeStatusResponse};
 
 const GET_NODE_STATUS_PATH: &str = "/status";
 
@@ -33,7 +32,7 @@ impl NodeService {
 		let status = self.node.status();
 		let BestBlock { block_hash, height } = status.current_best_block;
 
-		let msg = GetNodeInfoResponse {
+		let msg = GetNodeStatusResponse {
 			public_key: self.node.node_id().to_string(),
 			current_best_block: Some(protobuf_types::BestBlock {
 				block_hash: block_hash.to_string(),

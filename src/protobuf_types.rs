@@ -1,9 +1,9 @@
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetNodeInfoRequest {}
+pub struct GetNodeStatusRequest {}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetNodeInfoResponse {
+pub struct GetNodeStatusResponse {
 	#[prost(string, tag = "1")]
 	pub public_key: ::prost::alloc::string::String,
 	#[prost(message, optional, tag = "2")]

@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use std::str::FromStr;
 
 use ldk_node::lightning::ln::msgs::SocketAddress;
@@ -10,11 +11,13 @@ pub struct Config {
 	pub listening_addr: SocketAddress,
 	pub log_level: LogLevel,
 	pub network: Network,
+    pub rest_service_addr: SocketAddr,
 }
 
 impl From<JsonConfig> for Config {
 	fn from(json_config: JsonConfig) -> Self {
 		let listening_addr = SocketAddress::from_str(&json_config.listening_addr).unwrap();
+        let rest_service_addr = SocketAddr::from_str(&json_config.rest_service_addr).unwrap();
 		let log_level = match json_config.log_level.to_lowercase().as_str() {
 			"gossip" => LogLevel::Gossip,
 			"trace" => LogLevel::Trace,
@@ -29,6 +32,7 @@ impl From<JsonConfig> for Config {
 			listening_addr,
 			log_level,
 			network: json_config.network,
+            rest_service_addr
 		}
 	}
 }
@@ -39,4 +43,5 @@ pub struct JsonConfig {
 	listening_addr: String,
 	log_level: String,
 	network: Network,
+    rest_service_addr: String,
 }

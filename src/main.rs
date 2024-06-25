@@ -9,6 +9,14 @@ use ldk_node::{Builder, Config as LdkNodeConfig, Event};
 
 const CONFIG_FILE_NAME: &str = "config.json";
 
+use hyper::server::conn::http1;
+use hyper_util::rt::TokioIo;
+use tokio::net::TcpListener;
+
+use crate::service::NodeService;
+
+mod service;
+
 fn main() {
 	let args: Vec<String> = std::env::args().collect();
 
@@ -17,7 +25,7 @@ fn main() {
 		std::process::exit(-1);
 	}
 
-	let config = utils::read_json_config(Path::new(&args[1]).join(CONFIG_FILE_NAME)).unwrap();
+	let config = utils::read_config_from_json(Path::new(&args[1]).join(CONFIG_FILE_NAME)).unwrap();
 
 	let mut ldk_node_config = LdkNodeConfig::default();
 	ldk_node_config.storage_dir_path = args[1].clone();
@@ -46,6 +54,8 @@ fn main() {
 			},
 		};
 		let event_node = Arc::clone(&node);
+		let rest_svc_listener =
+			TcpListener::bind(config.rest_service_addr).await.expect("Failed to bind listening port");
 		loop {
 			tokio::select! {
 				event = event_node.next_event_async() => {
@@ -72,6 +82,20 @@ fn main() {
 					}
 					event_node.event_handled();
 				},
+				res = rest_svc_listener.accept() => {
+					match res {
+						Ok((stream, _)) => {
+							let io_stream = TokioIo::new(stream);
+							let node_service = NodeService::new(Arc::clone(&node));
+							runtime.spawn(async move {
+								if let Err(err) = http1::Builder::new().serve_connection(io_stream, node_service).await {
+									eprintln!("Failed to serve connection: {}", err);
+								}
+							});
+						},
+						Err(e) => eprintln!("Failed to accept connection: {}", e),
+					}
+				}
 				_ = tokio::signal::ctrl_c() => {
 					println!("Received CTRL-C, shutting down..");
 					break;

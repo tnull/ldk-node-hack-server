@@ -115,3 +115,127 @@ message PaymentId {
 
   bytes data = 1;
 }
+
+message ListChannelsRequest {
+
+}
+
+message ListChannelsResponse {
+  repeated Channel channels = 1;
+}
+
+message Channel {
+  // The channel ID (prior to funding transaction generation, this is a random 32-byte
+  // identifier, afterwards this is the transaction ID of the funding transaction XOR the
+  // funding transaction output).
+  //
+  // Note that this means this value is *not* persistent - it can change once during the
+  // lifetime of the channel.
+  string channel_id = 1;
+
+  // The node ID of our the channel's remote counterparty.
+  string counterparty_node_id = 2;
+
+  // The channel's funding transaction output, if we've negotiated the funding transaction with
+  // our counterparty already.
+  optional Outpoint funding_txo = 3;
+
+  // The value, in satoshis, of this channel as it appears in the funding output.
+  uint64 channel_value_sats = 4;
+
+  // The currently negotiated fee rate denominated in satoshi per 1000 weight units,
+  // which is applied to commitment and HTLC transactions.
+  uint32 feerate_sat_per_1000_weight = 5;
+
+  // The available outbound capacity for sending HTLCs to the remote peer.
+  //
+  // The amount does not include any pending HTLCs which are not yet resolved (and, thus, whose
+  // balance is not available for inclusion in new outbound HTLCs). This further does not include
+  // any pending outgoing HTLCs which are awaiting some other resolution to be sent.
+  uint64 outbound_capacity_msat = 6;
+
+  // The available outbound capacity for sending HTLCs to the remote peer.
+  //
+  // The amount does not include any pending HTLCs which are not yet resolved
+  // (and, thus, whose balance is not available for inclusion in new inbound HTLCs). This further
+  // does not include any pending outgoing HTLCs which are awaiting some other resolution to be
+  // sent.
+  uint64 inbound_capacity_msat = 7;
+
+  // The number of required confirmations on the funding transactions before the funding is
+  // considered "locked". The amount is selected by the channel fundee.
+  //
+  // The value will be `None` for outbound channels until the counterparty accepts the channel.
+  optional uint32 confirmations_required = 8;
+
+  // The current number of confirmations on the funding transaction.
+  optional uint32 confirmations = 9;
+
+  // Is `true` if the channel was initiated (and therefore funded) by us.
+  bool is_outbound = 10;
+
+  // Is `true` if both parties have exchanged `channel_ready` messages, and the channel is
+  // not currently being shut down. Both parties exchange `channel_ready` messages upon
+  // independently verifying that the required confirmations count provided by
+  // `confirmations_required` has been reached.
+  bool is_channel_ready = 11;
+
+  // Is `true` if the channel (a) `channel_ready` messages have been exchanged, (b) the
+  // peer is connected, and (c) the channel is not currently negotiating shutdown.
+  //
+  // This is a strict superset of `is_channel_ready`.
+  bool is_usable = 12;
+
+  // Is `true` if this channel is (or will be) publicly-announced
+  bool is_public = 13;
+
+  // The difference in the CLTV value between incoming HTLCs and an outbound HTLC forwarded over
+  // the channel.
+  optional uint32 cltv_expiry_delta = 14;
+
+  // The smallest value HTLC (in msat) the remote peer will accept, for this channel.
+  //
+  // This field is only `None` before we have received either the `OpenChannel` or
+  // `AcceptChannel` message from the remote peer.
+  optional uint64 counterparty_outbound_htlc_minimum_msat = 15;
+
+  // The largest value HTLC (in msat) the remote peer currently will accept, for this channel.
+  optional uint64 counterparty_outbound_htlc_maximum_msat = 16;
+
+  // The available outbound capacity for sending a single HTLC to the remote peer. This is
+  // similar to `outbound_capacity_msat` but it may be further restricted by
+  // the current state and per-HTLC limit(s). This is intended for use when routing, allowing us
+  // to use a limit as close as possible to the HTLC limit we can currently send.
+  uint64 next_outbound_htlc_limit_msat = 17;
+
+  // The minimum value for sending a single HTLC to the remote peer. This is the equivalent of
+  // `next_outbound_htlc_limit_msat` but represents a lower-bound, rather than
+  // an upper-bound. This is intended for use when routing, allowing us to ensure we pick a
+  // route which is valid.
+  uint64 next_outbound_htlc_minimum_msat = 18;
+
+  // The number of blocks (after our commitment transaction confirms) that we will need to wait
+  // until we can claim our funds after we force-close the channel. During this time our
+  // counterparty is allowed to punish us if we broadcasted a stale state. If our counterparty
+  // force-closes the channel and broadcasts a commitment transaction we do not have to wait any
+  // time to claim our non-HTLC-encumbered funds.
+  //
+  // This value will be `None` for outbound channels until the counterparty accepts the channel.
+  optional uint32 force_close_spend_delay = 19;
+
+  // Amount (in millionths of a satoshi) charged per satoshi for payments forwarded outbound
+  // over the channel.
+  uint32 forwarding_fee_proportional_millionths = 20;
+
+  // Amount (in milli-satoshi) charged for payments forwarded outbound over the channel, in
+  // excess of [`forwarding_fee_proportional_millionths`].
+  uint32 forwarding_fee_base_msat = 21;
+}
+
+// Represents to transaction output.
+message Outpoint {
+  // The referenced transaction's txid.
+  string txid = 1;
+  // The index of the referenced output in its transaction's vout.
+  uint32 vout = 2;
+}

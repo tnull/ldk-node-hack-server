@@ -239,3 +239,21 @@ message Outpoint {
   // The index of the referenced output in its transaction's vout.
   uint32 vout = 2;
 }
+
+service ServerHack {
+  rpc GetNodeStatus(GetNodeStatusRequest) returns (GetNodeStatusResponse) {}
+
+  rpc OnchainReceive(OnchainReceiveRequest) returns (OnchainRecevieResponse) {}
+
+  rpc OnchainSend(OnchainSendRequest) returns (OnchainSendResponse) {}
+
+  rpc Bolt11Receive(Bolt11ReceiveRequest) returns (Bolt11ReceiveResponse) {}
+
+  rpc Bolt11Send(Bolt11SendRequest) returns (Bolt11SendResponse) {}
+
+  rpc Bolt12Receive(Bolt12ReceiveRequest) returns (Bolt12ReceiveResponse) {}
+
+  rpc Bolt12Send(Bolt12SendRequest) returns (Bolt12SendResponse) {}
+
+  rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse) {}
+}

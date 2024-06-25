@@ -1,8 +1,8 @@
 {
-    "esplora_server_url": "localhost:3000",
-    "listening_addr": "localhost:3001",
-    "log_level": "info",
+    "esplora_server_url": "http://localhost:3002",
+    "listening_addr": "localhost:9735",
+    "log_level": "trace",
     "network": "regtest",
-    "rest_service_addr": "127.0.0.1:3002",
-    "storage_dir_path": "./storage"
+    "rest_service_addr": "127.0.0.1:3000",
+    "storage_dir_path": "/tmp/ldk-node-hack-server"
 }

@@ -10,6 +10,7 @@ use ldk_node::{Builder, Config as LdkNodeConfig, Event};
 use tokio::net::TcpListener;
 use tokio::signal::unix::SignalKind;
 
+mod protobuf_types;
 mod service;
 
 fn main() {

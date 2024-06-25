@@ -1,6 +1,30 @@
 syntax = "proto3";
 package ldk_server_hack;
 
-message HelloRequest {
-  string name = 1;
+message GetNodeInfoRequest {
+}
+
+message GetNodeInfoResponse {
+
+  string public_key = 1;
+
+  BestBlock current_best_block = 2;
+
+  optional uint64 latest_wallet_sync_timestamp = 3;
+
+  optional uint64 latest_onchain_wallet_sync_timestamp = 4;
+
+  optional uint64 latest_fee_rate_cache_update_timestamp = 5;
+
+  optional uint64 latest_rgs_snapshot_timestamp = 6;
+
+  optional uint64  latest_node_announcement_broadcast_timestamp = 7;
+}
+
+message BestBlock {
+
+  string block_hash = 1;
+
+  uint32 height = 2;
+
 }

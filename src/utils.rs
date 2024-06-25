@@ -27,7 +27,8 @@ mod tests {
             "listening_addr": "localhost:3001",
             "log_level": "info",
             "network": "regtest",
-            "rest_service_addr": "127.0.0.1:3002"
+            "rest_service_addr": "127.0.0.1:3002",
+			"storage_dir_path": "/tmp"
         }"#;
 
 		std::fs::write(storage_path.join(config_file_name), json_config).unwrap();
@@ -40,6 +41,7 @@ mod tests {
 				log_level: LogLevel::Info,
 				network: Network::Regtest,
 				rest_service_addr: SocketAddr::from_str("127.0.0.1:3002").unwrap(),
+				storage_dir_path: "/tmp".to_string(),
 			}
 		)
 	}

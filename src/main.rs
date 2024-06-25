@@ -10,19 +10,17 @@ use ldk_node::{Builder, Config as LdkNodeConfig, Event};
 use tokio::net::TcpListener;
 use tokio::signal::unix::SignalKind;
 
-const CONFIG_FILE_NAME: &str = "config.json";
-
 mod service;
 
 fn main() {
 	let args: Vec<String> = std::env::args().collect();
 
 	if args.len() < 2 {
-		eprintln!("Usage: {} storage_path", args[0]);
+		eprintln!("Usage: {} config_path", args[0]);
 		std::process::exit(-1);
 	}
 
-	let config = utils::read_config_from_json(Path::new(&args[1]).join(CONFIG_FILE_NAME)).unwrap();
+	let config = utils::read_config_from_json(Path::new(&args[1])).unwrap();
 
 	let mut ldk_node_config = LdkNodeConfig::default();
 	ldk_node_config.storage_dir_path = args[1].clone();

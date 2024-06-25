@@ -12,6 +12,7 @@ pub struct Config {
 	pub log_level: LogLevel,
 	pub network: Network,
 	pub rest_service_addr: SocketAddr,
+	pub storage_dir_path: String,
 }
 
 impl From<JsonConfig> for Config {
@@ -33,6 +34,7 @@ impl From<JsonConfig> for Config {
 			log_level,
 			network: json_config.network,
 			rest_service_addr,
+			storage_dir_path: json_config.storage_dir_path,
 		}
 	}
 }
@@ -44,4 +46,5 @@ pub struct JsonConfig {
 	log_level: String,
 	network: Network,
 	rest_service_addr: String,
+	storage_dir_path: String,
 }

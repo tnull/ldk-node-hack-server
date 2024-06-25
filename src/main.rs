@@ -1,6 +1,7 @@
-pub mod config;
+mod config;
+mod utils;
 
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use crate::service::NodeService;
 use hyper::server::conn::http1;
@@ -9,7 +10,7 @@ use ldk_node::{Builder, Config as LdkNodeConfig, Event};
 use tokio::net::TcpListener;
 use tokio::signal::unix::SignalKind;
 
-use config::Config;
+const CONFIG_FILE_NAME: &str = "config.json";
 
 mod service;
 
@@ -21,7 +22,7 @@ fn main() {
 		std::process::exit(-1);
 	}
 
-	let config = Config::new(&args[1]).unwrap();
+	let config = utils::read_config_from_json(Path::new(&args[1]).join(CONFIG_FILE_NAME)).unwrap();
 
 	let mut ldk_node_config = LdkNodeConfig::default();
 	ldk_node_config.storage_dir_path = args[1].clone();

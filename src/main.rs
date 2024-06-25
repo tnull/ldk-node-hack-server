@@ -1,63 +1,35 @@
-use std::str::FromStr;
-use std::sync::Arc;
+mod config;
+mod utils;
 
-use tokio::signal::unix::SignalKind;
-
-use ldk_node::bitcoin::Network;
-use ldk_node::lightning::ln::msgs::SocketAddress;
-use ldk_node::{Builder, Config, Event, LogLevel};
-
-use hyper::server::conn::http1;
-use hyper_util::rt::TokioIo;
-use tokio::net::TcpListener;
-
-use std::net::SocketAddr;
+use std::{path::Path, sync::Arc};
 
 use crate::service::NodeService;
+use hyper::server::conn::http1;
+use hyper_util::rt::TokioIo;
+use ldk_node::{Builder, Config as LdkNodeConfig, Event};
+use tokio::net::TcpListener;
+use tokio::signal::unix::SignalKind;
 
 mod service;
 
 fn main() {
 	let args: Vec<String> = std::env::args().collect();
 
-	if args.len() < 6 {
-		eprintln!(
-			"Usage: {} storage_path listening_addr rest_svc_addr network esplora_server_url",
-			args[0]
-		);
+	if args.len() < 2 {
+		eprintln!("Usage: {} config_path", args[0]);
 		std::process::exit(-1);
 	}
 
-	let mut config = Config::default();
-	config.storage_dir_path = args[1].clone();
-	config.log_level = LogLevel::Trace;
+	let config = utils::read_config_from_json(Path::new(&args[1])).unwrap();
 
-	config.listening_addresses = match SocketAddress::from_str(&args[2]) {
-		Ok(addr) => Some(vec![addr]),
-		Err(_) => {
-			eprintln!("Failed to parse listening_addr: {}", args[2]);
-			std::process::exit(-1);
-		},
-	};
+	let mut ldk_node_config = LdkNodeConfig::default();
+	ldk_node_config.storage_dir_path = args[1].clone();
+	ldk_node_config.log_level = config.log_level;
+	ldk_node_config.network = config.network;
+	ldk_node_config.listening_addresses = Some(vec![config.listening_addr.clone()]);
 
-	let rest_svc_addr = match SocketAddr::from_str(&args[3]) {
-		Ok(addr) => addr,
-		Err(_) => {
-			eprintln!("Failed to parse rest_svc_addr: {}", args[3]);
-			std::process::exit(-1);
-		},
-	};
-
-	config.network = match Network::from_str(&args[4]) {
-		Ok(network) => network,
-		Err(_) => {
-			eprintln!("Unsupported network: {}. Use 'bitcoin', 'testnet', 'regtest', 'signet', 'regtest'.", args[4]);
-			std::process::exit(-1);
-		},
-	};
-
-	let mut builder = Builder::from_config(config.clone());
-	builder.set_esplora_server(args[5].clone());
+	let mut builder = Builder::from_config(ldk_node_config);
+	builder.set_esplora_server(config.esplora_server_url);
 
 	let runtime =
 		Arc::new(tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap());
@@ -66,11 +38,7 @@ fn main() {
 	println!("Starting up...");
 	node.start_with_runtime(Arc::clone(&runtime)).unwrap();
 
-	println!(
-		"CONNECTION_STRING: {}@{}",
-		node.node_id(),
-		config.listening_addresses.as_ref().unwrap().first().unwrap()
-	);
+	println!("CONNECTION_STRING: {}@{}", node.node_id(), config.listening_addr.to_string());
 
 	runtime.block_on(async {
 		let mut sigterm_stream = match tokio::signal::unix::signal(SignalKind::terminate()) {
@@ -81,8 +49,9 @@ fn main() {
 			},
 		};
 		let event_node = Arc::clone(&node);
-		let rest_svc_listener =
-			TcpListener::bind(rest_svc_addr).await.expect("Failed to bind listening port");
+		let rest_svc_listener = TcpListener::bind(config.rest_service_addr)
+			.await
+			.expect("Failed to bind listening port");
 		loop {
 			tokio::select! {
 				event = event_node.next_event_async() => {

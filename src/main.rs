@@ -1,10 +1,12 @@
+pub mod config;
+
 use std::sync::Arc;
 
 use tokio::signal::unix::SignalKind;
 
 use ldk_node::{Builder, Config as LdkNodeConfig, Event};
 
-use ldk_node_hack_server::config::Config;
+use config::Config;
 
 fn main() {
 	let args: Vec<String> = std::env::args().collect();

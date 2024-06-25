@@ -51,8 +51,9 @@ fn main() {
 			},
 		};
 		let event_node = Arc::clone(&node);
-		let rest_svc_listener =
-			TcpListener::bind(config.rest_service_addr).await.expect("Failed to bind listening port");
+		let rest_svc_listener = TcpListener::bind(config.rest_service_addr)
+			.await
+			.expect("Failed to bind listening port");
 		loop {
 			tokio::select! {
 				event = event_node.next_event_async() => {

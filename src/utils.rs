@@ -39,7 +39,7 @@ mod tests {
 				listening_addr: SocketAddress::from_str("localhost:3001").unwrap(),
 				log_level: LogLevel::Info,
 				network: Network::Regtest,
-                rest_service_addr: SocketAddr::from_str("127.0.0.1:3002").unwrap(),
+				rest_service_addr: SocketAddr::from_str("127.0.0.1:3002").unwrap(),
 			}
 		)
 	}

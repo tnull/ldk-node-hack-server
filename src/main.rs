@@ -3,16 +3,28 @@ use std::sync::Arc;
 
 use tokio::signal::unix::SignalKind;
 
+use ldk_node::bitcoin::Network;
 use ldk_node::lightning::ln::msgs::SocketAddress;
 use ldk_node::{Builder, Config, Event, LogLevel};
 
-use ldk_node::bitcoin::Network;
+use hyper::server::conn::http1;
+use hyper_util::rt::TokioIo;
+use tokio::net::TcpListener;
+
+use std::net::SocketAddr;
+
+use crate::service::NodeService;
+
+mod service;
 
 fn main() {
 	let args: Vec<String> = std::env::args().collect();
 
-	if args.len() < 5 {
-		eprintln!("Usage: {} storage_path listening_addr network esplora_server_url", args[0]);
+	if args.len() < 6 {
+		eprintln!(
+			"Usage: {} storage_path listening_addr rest_svc_addr network esplora_server_url",
+			args[0]
+		);
 		std::process::exit(-1);
 	}
 
@@ -28,16 +40,24 @@ fn main() {
 		},
 	};
 
-	config.network = match Network::from_str(&args[3]) {
+	let rest_svc_addr = match SocketAddr::from_str(&args[3]) {
+		Ok(addr) => addr,
+		Err(_) => {
+			eprintln!("Failed to parse rest_svc_addr: {}", args[3]);
+			std::process::exit(-1);
+		},
+	};
+
+	config.network = match Network::from_str(&args[4]) {
 		Ok(network) => network,
 		Err(_) => {
-			eprintln!("Unsupported network: {}. Use 'bitcoin', 'testnet', 'regtest', 'signet', 'regtest'.", args[3]);
+			eprintln!("Unsupported network: {}. Use 'bitcoin', 'testnet', 'regtest', 'signet', 'regtest'.", args[4]);
 			std::process::exit(-1);
 		},
 	};
 
 	let mut builder = Builder::from_config(config.clone());
-	builder.set_esplora_server(args[4].clone());
+	builder.set_esplora_server(args[5].clone());
 
 	let runtime =
 		Arc::new(tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap());
@@ -61,6 +81,8 @@ fn main() {
 			},
 		};
 		let event_node = Arc::clone(&node);
+		let rest_svc_listener =
+			TcpListener::bind(rest_svc_addr).await.expect("Failed to bind listening port");
 		loop {
 			tokio::select! {
 				event = event_node.next_event_async() => {
@@ -87,6 +109,20 @@ fn main() {
 					}
 					event_node.event_handled();
 				},
+				res = rest_svc_listener.accept() => {
+					match res {
+						Ok((stream, _)) => {
+							let io_stream = TokioIo::new(stream);
+							let node_service = NodeService::new(Arc::clone(&node));
+							runtime.spawn(async move {
+								if let Err(err) = http1::Builder::new().serve_connection(io_stream, node_service).await {
+									eprintln!("Failed to serve connection: {}", err);
+								}
+							});
+						},
+						Err(e) => eprintln!("Failed to accept connection: {}", e),
+					}
+				}
 				_ = tokio::signal::ctrl_c() => {
 					println!("Received CTRL-C, shutting down..");
 					break;

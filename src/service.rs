@@ -9,6 +9,8 @@ use core::future::Future;
 use core::pin::Pin;
 use std::sync::Arc;
 
+const GET_NODE_STATUS_PATH: &str = "/status";
+
 type Req = Request<Incoming>;
 
 #[derive(Clone)]
@@ -21,12 +23,15 @@ impl NodeService {
 		Self { node }
 	}
 
-	// USE: pub(crate) async fn handle_request(&self, _: Req) -> Result<Response<Full<Bytes>>, Infallible> {
-	//	Ok(Response::new(Full::new(Bytes::from("Hello, World!"))))
-	//}
+	fn handle_get_node_status_request(
+		&self, _: Req,
+	) -> <NodeService as Service<Request<Incoming>>>::Future {
+		let msg = format!("{:?}", self.node.status());
+		make_response(msg)
+	}
 
 	fn default_response(&self) -> <NodeService as Service<Request<Incoming>>>::Future {
-		let msg = format!("UNKNOWN REQUEST. Status: {:?}", self.node.status());
+		let msg = format!("UNKNOWN REQUEST");
 		make_response(msg)
 	}
 }
@@ -38,7 +43,10 @@ impl Service<Req> for NodeService {
 
 	fn call(&self, req: Req) -> Self::Future {
 		println!("processing request: {} {}", req.method(), req.uri().path());
-		self.default_response()
+		match req.uri().path() {
+			GET_NODE_STATUS_PATH => self.handle_get_node_status_request(req),
+			_ => self.default_response(),
+		}
 	}
 }
 

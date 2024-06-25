@@ -11,7 +11,7 @@ pub fn read_config_from_json<P: AsRef<Path>>(config_path: P) -> Result<Config> {
 
 #[cfg(test)]
 mod tests {
-	use std::str::FromStr;
+	use std::{net::SocketAddr, str::FromStr};
 
 	use ldk_node::{bitcoin::Network, lightning::ln::msgs::SocketAddress, LogLevel};
 
@@ -26,18 +26,20 @@ mod tests {
             "esplora_server_url": "localhost:3000",
             "listening_addr": "localhost:3001",
             "log_level": "info",
-            "network": "regtest"
+            "network": "regtest",
+            "rest_service_addr": "127.0.0.1:3002"
         }"#;
 
 		std::fs::write(storage_path.join(config_file_name), json_config).unwrap();
 
 		assert_eq!(
-			read_json_config(storage_path.join(config_file_name)).unwrap(),
+			read_config_from_json(storage_path.join(config_file_name)).unwrap(),
 			Config {
 				esplora_server_url: "localhost:3000".to_string(),
 				listening_addr: SocketAddress::from_str("localhost:3001").unwrap(),
 				log_level: LogLevel::Info,
 				network: Network::Regtest,
+                rest_service_addr: SocketAddr::from_str("127.0.0.1:3002").unwrap(),
 			}
 		)
 	}

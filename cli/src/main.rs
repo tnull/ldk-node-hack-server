@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
-use common::proto::ldk_server_hack::GetNodeStatusRequest;
-use common::ServerHackClient;
+use client::ServerHackClient;
+use protos::GetNodeStatusRequest;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

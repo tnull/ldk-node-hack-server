@@ -26,7 +26,7 @@ impl ServerHackClient {
 	pub async fn get_node_status(
 		&self, request: GetNodeStatusRequest,
 	) -> Result<GetNodeStatusResponse, ServerHackError> {
-		let url = format!("http://{}/status", self.base_url);
+		let url = format!("http://{}/getNodeStatus", self.base_url);
 		self.post_request(&request, &url).await
 	}
 

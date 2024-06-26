@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use client::ServerHackClient;
 use protos::{
 	GetBalancesRequest, GetNodeStatusRequest, ListChannelsRequest, OnchainReceiveRequest,
-	PaymentsHistoryRequest,
+	OnchainSendRequest, PaymentsHistoryRequest,
 };
 
 #[derive(Parser, Debug)]
@@ -19,6 +19,7 @@ struct Cli {
 enum Commands {
 	NodeStatus,
 	NewAddress,
+	SendOnchain { address: String, amount_sats: Option<u64> },
 	NodeBalances,
 	ListChannels,
 	PaymentsHistory,
@@ -48,7 +49,17 @@ async fn main() {
 				Err(e) => {
 					eprintln!("Error getting new funding address: {:?}", e);
 				},
-			}
+			};
+		},
+		Commands::SendOnchain { address, amount_sats } => {
+			match client.send_onchain(OnchainSendRequest { address, amount_sats }).await {
+				Ok(response) => {
+					println!("Sent onchain: {:?}", response);
+				},
+				Err(e) => {
+					eprintln!("Error sending onchain: {:?}", e);
+				},
+			};
 		},
 		Commands::NodeBalances {} => {
 			match client.get_node_balances(GetBalancesRequest {}).await {

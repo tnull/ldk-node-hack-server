@@ -1,3 +1,4 @@
+use ldk_node::bitcoin::Address;
 use ldk_node::lightning::chain::BestBlock;
 use ldk_node::payment::{PaymentDetails, PaymentDirection, PaymentKind, PaymentStatus};
 use ldk_node::LightningBalance::{
@@ -12,6 +13,7 @@ use prost::Message;
 
 use core::future::Future;
 use core::pin::Pin;
+use core::str::FromStr;
 use http_body_util::{BodyExt, Full};
 use hyper::body::{Bytes, Incoming};
 use hyper::service::Service;
@@ -21,11 +23,13 @@ use std::sync::Arc;
 
 use protos::{
 	lightning_balance, pending_sweep_balance, Channel, GetNodeStatusResponse, ListChannelsRequest,
-	ListChannelsResponse, OnchainReceiveRequest, OnchainReceiveResponse, Outpoint,
+	ListChannelsResponse, OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest,
+	OnchainSendResponse, Outpoint,
 };
 
 const GET_NODE_STATUS_PATH: &str = "/getNodeStatus";
 const ONCHAIN_RECEIVE: &str = "/onchain/receive";
+const ONCHAIN_SEND: &str = "/onchain/send";
 const GET_NODE_BALANCES_PATH: &str = "/getNodeBalances";
 const LIST_CHANNELS_PATH: &str = "/listChannels";
 const PAYMENTS_HISTORY_PATH: &str = "/listPaymentsHistory";
@@ -88,6 +92,25 @@ async fn handle_onchain_receive(
 	let response = OnchainReceiveResponse {
 		address: node.onchain_payment().new_address().unwrap().to_string(),
 	};
+	Ok(Response::builder().body(Full::new(Bytes::from(response.encode_to_vec()))).unwrap())
+}
+
+async fn handle_onchain_send(
+	node: Arc<Node>, request: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	// FIXME: Limit how much we read and add error checks
+	let bytes = request.into_body().collect().await.unwrap().to_bytes();
+	let request = OnchainSendRequest::decode(bytes).unwrap();
+
+	let address = Address::from_str(&request.address)
+		.unwrap()
+		.require_network(node.config().network)
+		.unwrap();
+	let txid = match request.amount_sats {
+		Some(amount_sats) => node.onchain_payment().send_to_address(&address, amount_sats).unwrap(),
+		None => node.onchain_payment().send_all_to_address(&address).unwrap(),
+	};
+	let response = OnchainSendResponse { txid: txid.to_string() };
 	Ok(Response::builder().body(Full::new(Bytes::from(response.encode_to_vec()))).unwrap())
 }
 
@@ -310,6 +333,7 @@ impl Service<Req> for NodeService {
 				Box::pin(async { handle_get_balances_request(node, req).await })
 			},
 			ONCHAIN_RECEIVE => Box::pin(async { handle_onchain_receive(node, req).await }),
+			ONCHAIN_SEND => Box::pin(async { handle_onchain_send(node, req).await }),
 			LIST_CHANNELS_PATH => Box::pin(async { handle_list_channels_request(node, req).await }),
 			PAYMENTS_HISTORY_PATH => self.handle_get_payment_history_request(req),
 			_ => self.default_response(),

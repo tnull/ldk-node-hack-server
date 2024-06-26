@@ -5,7 +5,8 @@ use prost::Message;
 
 use protos::{
 	GetBalancesRequest, GetBalancesResponse, GetNodeStatusRequest, GetNodeStatusResponse,
-	ListChannelsRequest, OnchainReceiveRequest, PaymentsHistoryRequest, PaymentsHistoryResponse,
+	ListChannelsRequest, OnchainReceiveRequest, OnchainSendRequest, OnchainSendResponse,
+	PaymentsHistoryRequest, PaymentsHistoryResponse,
 };
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
@@ -34,6 +35,13 @@ impl ServerHackClient {
 		&self, request: OnchainReceiveRequest,
 	) -> Result<OnchainReceiveRequest, ServerHackError> {
 		let url = format!("http://{}//onchain/receive", self.base_url);
+		self.post_request(&request, &url).await
+	}
+
+	pub async fn send_onchain(
+		&self, request: OnchainSendRequest,
+	) -> Result<OnchainSendResponse, ServerHackError> {
+		let url = format!("http://{}/onchain/send", self.base_url);
 		self.post_request(&request, &url).await
 	}
 

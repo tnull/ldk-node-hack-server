@@ -9,9 +9,8 @@ COPY src/ src/
 COPY Cargo.toml .
 COPY docker-config.json .
 
-# Copy the in tree dependencies. Client is for testing purposes
+# Copy the in tree dependencies.
 COPY protos/ protos/
-COPY client/ client/
 
 # Build the Rust app
 RUN cargo build

@@ -29,6 +29,7 @@ fn main() {
 
 	let mut builder = Builder::from_config(ldk_node_config);
 	builder.set_esplora_server(config.esplora_server_url);
+	builder.set_liquidity_provider_lsps2([42u8; 32]);
 
 	let runtime =
 		Arc::new(tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap());

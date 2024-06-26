@@ -1,5 +1,5 @@
 [workspace]
-members = ["protos"]
+members = ["protos", "cli"]
 
 [package]
 name = "ldk-node-hack-server"

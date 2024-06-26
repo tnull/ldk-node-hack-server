@@ -7,4 +7,5 @@ rust-version = "1.63"
 [dependencies]
 clap = { version = "4.5.7", features = ["derive"] }
 client = { version = "0.1.0", path = "../client" }
+protos = { version = "0.1.0", path = "../protos" }
 tokio = { version = "1.38.0", features = ["full"] }

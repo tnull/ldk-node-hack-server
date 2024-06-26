@@ -1,10 +1,6 @@
 # Use the latest version of the Rust base image
 FROM rust:latest
 
-# Install build tools
-RUN apt-get update && apt-get install -y \
-    protobuf-compiler
-
 # Set the working directory in the container to /my
 WORKDIR /usr/src/ldk-node-hack-server
 

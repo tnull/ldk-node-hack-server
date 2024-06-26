@@ -34,7 +34,7 @@ pub struct BestBlock {
 pub struct OnchainReceiveRequest {}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct OnchainRecevieResponse {
+pub struct OnchainReceiveResponse {
 	#[prost(string, tag = "1")]
 	pub address: ::prost::alloc::string::String,
 }

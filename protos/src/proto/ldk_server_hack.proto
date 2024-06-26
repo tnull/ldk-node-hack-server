@@ -33,7 +33,7 @@ message BestBlock {
 message OnchainReceiveRequest {
 }
 
-message OnchainRecevieResponse {
+message OnchainReceiveResponse {
 
   string address = 1;
 }

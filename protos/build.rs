@@ -16,5 +16,5 @@ fn generate_protos() {
 		.expect("protobuf compilation failed");
 	println!("sss {}", &env::var("OUT_DIR").unwrap());
 	let from_path = Path::new(&env::var("OUT_DIR").unwrap()).join("ldk_server_hack.rs");
-	fs::copy(from_path, "src/protobuf_types.rs").unwrap();
+	fs::copy(from_path, "src/lib.rs").unwrap();
 }

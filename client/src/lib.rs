@@ -1,18 +1,12 @@
 mod error;
 
 use crate::error::ServerHackError;
-use crate::proto::ldk_server_hack::GetNodeStatusResponse;
 use prost::Message;
+use protos::{GetNodeStatusRequest, GetNodeStatusResponse};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
 
 const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
-
-pub mod proto {
-	pub mod ldk_server_hack {
-		tonic::include_proto!("ldk_server_hack");
-	}
-}
 
 #[derive(Clone)]
 pub struct ServerHackClient {
@@ -26,10 +20,10 @@ impl ServerHackClient {
 	}
 
 	pub async fn get_node_status(
-		&self, _request: proto::ldk_server_hack::GetNodeStatusRequest,
+		&self, request: GetNodeStatusRequest,
 	) -> Result<GetNodeStatusResponse, ServerHackError> {
 		let url = format!("http://{}/status", self.base_url);
-		self.post_request(&_request, &url).await
+		self.post_request(&request, &url).await
 	}
 
 	async fn post_request<Rq: Message, Rs: Message + Default>(

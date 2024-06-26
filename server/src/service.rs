@@ -17,14 +17,14 @@ use core::str::FromStr;
 use http_body_util::{BodyExt, Full};
 use hyper::body::{Bytes, Incoming};
 use hyper::service::Service;
-use hyper::{Request, Response};
+use hyper::{Request, Response, StatusCode};
 
 use std::sync::Arc;
 
 use protos::{
-	lightning_balance, pending_sweep_balance, Channel, GetNodeStatusResponse, ListChannelsRequest,
-	ListChannelsResponse, OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest,
-	OnchainSendResponse, Outpoint,
+	lightning_balance, pending_sweep_balance, Channel, GetNodeStatusResponse,
+	GetPaymentDetailsRequest, ListChannelsRequest, ListChannelsResponse, OnchainReceiveRequest,
+	OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, Outpoint,
 };
 
 const GET_NODE_STATUS_PATH: &str = "/getNodeStatus";
@@ -33,6 +33,7 @@ const ONCHAIN_SEND: &str = "/onchain/send";
 const GET_NODE_BALANCES_PATH: &str = "/getNodeBalances";
 const LIST_CHANNELS_PATH: &str = "/listChannels";
 const PAYMENTS_HISTORY_PATH: &str = "/listPaymentsHistory";
+const GET_PAYMENT_DETAILS_PATH: &str = "/getPaymentDetails";
 
 type Req = Request<Incoming>;
 
@@ -319,6 +320,34 @@ async fn handle_list_channels_request(
 	Ok(Response::builder().body(Full::new(Bytes::from(response.encode_to_vec()))).unwrap())
 }
 
+async fn handle_get_payment_details_request(
+	node: Arc<Node>, request: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	let bytes = request.into_body().collect().await.unwrap().to_bytes();
+	let get_payment_details_request = GetPaymentDetailsRequest::decode(bytes).unwrap();
+
+	let payment_id = get_payment_details_request.payment_id.as_bytes();
+	if payment_id.len() != 32 {
+		return Ok(Response::builder()
+			.status(StatusCode::BAD_REQUEST)
+			.body(Full::new(Bytes::from(b"Payment ID len not 32 bytes".to_vec())))
+			.unwrap());
+	}
+
+	let mut arr = [0u8; 32];
+	arr.copy_from_slice(&payment_id[..]);
+	let payment_id = ldk_node::lightning::ln::channelmanager::PaymentId(arr);
+	if let Some(payment_details) = node.payment(&payment_id) {
+		let msg = to_payment_details_proto(&payment_details);
+		return Ok(Response::builder().body(Full::new(Bytes::from(msg.encode_to_vec()))).unwrap());
+	}
+
+	Ok(Response::builder()
+		.status(StatusCode::NOT_FOUND)
+		.body(Full::new(Bytes::from(b"Payment not found".to_vec())))
+		.unwrap())
+}
+
 impl Service<Req> for NodeService {
 	type Response = Response<Full<Bytes>>;
 	type Error = hyper::Error;
@@ -332,10 +361,11 @@ impl Service<Req> for NodeService {
 			GET_NODE_BALANCES_PATH => {
 				Box::pin(async { handle_get_balances_request(node, req).await })
 			},
-			ONCHAIN_RECEIVE => Box::pin(async { handle_onchain_receive(node, req).await }),
+			ONCHAIN_RECEIVE => Box::pin(handle_onchain_receive(node, req)),
 			ONCHAIN_SEND => Box::pin(async { handle_onchain_send(node, req).await }),
 			LIST_CHANNELS_PATH => Box::pin(async { handle_list_channels_request(node, req).await }),
 			PAYMENTS_HISTORY_PATH => self.handle_get_payment_history_request(req),
+			GET_PAYMENT_DETAILS_PATH => Box::pin(handle_get_payment_details_request(node, req)),
 			_ => self.default_response(),
 		}
 	}

@@ -561,6 +561,18 @@ pub struct PaymentsHistoryResponse {
 	#[prost(message, repeated, tag = "1")]
 	pub payments: ::prost::alloc::vec::Vec<PaymentDetails>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetPaymentDetailsRequest {
+	#[prost(string, tag = "1")]
+	pub payment_id: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetPaymentDetailsResponse {
+	#[prost(message, optional, tag = "1")]
+	pub payment: ::core::option::Option<PaymentDetails>,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum PaymentDirection {

@@ -14,7 +14,7 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-	GetNodeStatus {},
+	NodeStatus {},
 }
 
 #[tokio::main]
@@ -23,8 +23,7 @@ async fn main() {
 	let client = ServerHackClient::new(cli.base_url);
 
 	match cli.command {
-		Commands::GetNodeStatus {} => {
-			eprintln!("Getting node status...");
+		Commands::NodeStatus {} => {
 			match client.get_node_status(GetNodeStatusRequest {}).await {
 				Ok(response) => {
 					println!("Node status: {:?}", response);

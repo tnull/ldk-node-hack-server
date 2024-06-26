@@ -39,6 +39,7 @@ fn main() {
 	node.start_with_runtime(Arc::clone(&runtime)).unwrap();
 
 	println!("CONNECTION_STRING: {}@{}", node.node_id(), config.listening_addr.to_string());
+	println!("FUNDING ADDRESS: {}", node.onchain_payment().new_address().unwrap());
 
 	runtime.block_on(async {
 		let mut sigterm_stream = match tokio::signal::unix::signal(SignalKind::terminate()) {

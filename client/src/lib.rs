@@ -2,7 +2,7 @@ mod error;
 
 use crate::error::ServerHackError;
 use prost::Message;
-use protos::{GetNodeStatusRequest, GetNodeStatusResponse};
+use protos::{GetNodeStatusRequest, GetNodeStatusResponse, OnchainReceiveRequest};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
 
@@ -23,6 +23,13 @@ impl ServerHackClient {
 		&self, request: GetNodeStatusRequest,
 	) -> Result<GetNodeStatusResponse, ServerHackError> {
 		let url = format!("http://{}/status", self.base_url);
+		self.post_request(&request, &url).await
+	}
+
+	pub async fn get_new_funding_address(
+		&self, request: OnchainReceiveRequest,
+	) -> Result<OnchainReceiveRequest, ServerHackError> {
+		let url = format!("http://{}//onchain/receive", self.base_url);
 		self.post_request(&request, &url).await
 	}
 

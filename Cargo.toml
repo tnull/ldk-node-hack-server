@@ -1,4 +1,3 @@
-workspace = { members = ["common"] }
 [package]
 name = "ldk-node-hack-server"
 version = "0.1.0"

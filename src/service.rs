@@ -10,7 +10,7 @@ use hyper::service::Service;
 use hyper::{Request, Response};
 use std::sync::Arc;
 
-use crate::protobuf_types::{self, GetNodeStatusResponse};
+use protos::GetNodeStatusResponse;
 
 const GET_NODE_STATUS_PATH: &str = "/status";
 
@@ -34,7 +34,7 @@ impl NodeService {
 
 		let msg = GetNodeStatusResponse {
 			public_key: self.node.node_id().to_string(),
-			current_best_block: Some(protobuf_types::BestBlock {
+			current_best_block: Some(protos::BestBlock {
 				block_hash: block_hash.to_string(),
 				height,
 			}),

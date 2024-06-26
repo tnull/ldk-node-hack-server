@@ -2,7 +2,11 @@ mod error;
 
 use crate::error::ServerHackError;
 use prost::Message;
-use protos::{GetNodeStatusRequest, GetNodeStatusResponse, OnchainReceiveRequest};
+
+use protos::{
+	GetBalancesRequest, GetBalancesResponse, GetNodeStatusRequest, GetNodeStatusResponse,
+	OnchainReceiveRequest,
+};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
 
@@ -30,6 +34,13 @@ impl ServerHackClient {
 		&self, request: OnchainReceiveRequest,
 	) -> Result<OnchainReceiveRequest, ServerHackError> {
 		let url = format!("http://{}//onchain/receive", self.base_url);
+		self.post_request(&request, &url).await
+	}
+
+	pub async fn get_node_balances(
+		&self, request: GetBalancesRequest,
+	) -> Result<GetBalancesResponse, ServerHackError> {
+		let url = format!("http://{}/balances", self.base_url);
 		self.post_request(&request, &url).await
 	}
 

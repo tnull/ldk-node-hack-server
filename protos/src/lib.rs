@@ -254,3 +254,197 @@ pub struct Outpoint {
 	#[prost(uint32, tag = "2")]
 	pub vout: u32,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ClaimableOnChannelClose {
+	#[prost(string, tag = "1")]
+	pub channel_id: ::prost::alloc::string::String,
+	#[prost(string, tag = "2")]
+	pub counterparty_node_id: ::prost::alloc::string::String,
+	#[prost(uint64, tag = "3")]
+	pub amount_satoshis: u64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ClaimableAwaitingConfirmations {
+	#[prost(string, tag = "1")]
+	pub channel_id: ::prost::alloc::string::String,
+	#[prost(string, tag = "2")]
+	pub counterparty_node_id: ::prost::alloc::string::String,
+	#[prost(uint64, tag = "3")]
+	pub amount_satoshis: u64,
+	#[prost(uint32, tag = "4")]
+	pub confirmation_height: u32,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ContentiousClaimable {
+	#[prost(string, tag = "1")]
+	pub channel_id: ::prost::alloc::string::String,
+	#[prost(string, tag = "2")]
+	pub counterparty_node_id: ::prost::alloc::string::String,
+	#[prost(uint64, tag = "3")]
+	pub amount_satoshis: u64,
+	#[prost(uint32, tag = "4")]
+	pub timeout_height: u32,
+	#[prost(string, tag = "5")]
+	pub payment_hash: ::prost::alloc::string::String,
+	#[prost(string, tag = "6")]
+	pub payment_preimage: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MaybeTimeoutClaimableHtlc {
+	#[prost(string, tag = "1")]
+	pub channel_id: ::prost::alloc::string::String,
+	#[prost(string, tag = "2")]
+	pub counterparty_node_id: ::prost::alloc::string::String,
+	#[prost(uint64, tag = "3")]
+	pub amount_satoshis: u64,
+	#[prost(uint32, tag = "4")]
+	pub claimable_height: u32,
+	#[prost(string, tag = "5")]
+	pub payment_hash: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MaybePreimageClaimableHtlc {
+	#[prost(string, tag = "1")]
+	pub channel_id: ::prost::alloc::string::String,
+	#[prost(string, tag = "2")]
+	pub counterparty_node_id: ::prost::alloc::string::String,
+	#[prost(uint64, tag = "3")]
+	pub amount_satoshis: u64,
+	#[prost(uint32, tag = "4")]
+	pub expiry_height: u32,
+	#[prost(string, tag = "5")]
+	pub payment_hash: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CounterpartyRevokedOutputClaimable {
+	#[prost(string, tag = "1")]
+	pub channel_id: ::prost::alloc::string::String,
+	#[prost(string, tag = "2")]
+	pub counterparty_node_id: ::prost::alloc::string::String,
+	#[prost(uint64, tag = "3")]
+	pub amount_satoshis: u64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LightningBalance {
+	#[prost(oneof = "lightning_balance::BalanceType", tags = "1, 2, 3, 4, 5, 6")]
+	pub balance_type: ::core::option::Option<lightning_balance::BalanceType>,
+}
+/// Nested message and enum types in `LightningBalance`.
+pub mod lightning_balance {
+	#[allow(clippy::derive_partial_eq_without_eq)]
+	#[derive(Clone, PartialEq, ::prost::Oneof)]
+	pub enum BalanceType {
+		#[prost(message, tag = "1")]
+		ClaimableOnChannelClose(super::ClaimableOnChannelClose),
+		#[prost(message, tag = "2")]
+		ClaimableAwaitingConfirmations(super::ClaimableAwaitingConfirmations),
+		#[prost(message, tag = "3")]
+		ContentiousClaimable(super::ContentiousClaimable),
+		#[prost(message, tag = "4")]
+		MaybeTimeoutClaimableHtlc(super::MaybeTimeoutClaimableHtlc),
+		#[prost(message, tag = "5")]
+		MaybePreimageClaimableHtlc(super::MaybePreimageClaimableHtlc),
+		#[prost(message, tag = "6")]
+		CounterpartyRevokedOutputClaimable(super::CounterpartyRevokedOutputClaimable),
+	}
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PendingBroadcast {
+	#[prost(string, optional, tag = "1")]
+	pub channel_id: ::core::option::Option<::prost::alloc::string::String>,
+	#[prost(uint64, tag = "2")]
+	pub amount_satoshis: u64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BroadcastAwaitingConfirmation {
+	#[prost(string, optional, tag = "1")]
+	pub channel_id: ::core::option::Option<::prost::alloc::string::String>,
+	#[prost(uint32, tag = "2")]
+	pub latest_broadcast_height: u32,
+	#[prost(string, tag = "3")]
+	pub latest_spending_txid: ::prost::alloc::string::String,
+	#[prost(uint64, tag = "4")]
+	pub amount_satoshis: u64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct AwaitingThresholdConfirmations {
+	#[prost(string, optional, tag = "1")]
+	pub channel_id: ::core::option::Option<::prost::alloc::string::String>,
+	#[prost(string, tag = "2")]
+	pub latest_spending_txid: ::prost::alloc::string::String,
+	#[prost(string, tag = "3")]
+	pub confirmation_hash: ::prost::alloc::string::String,
+	#[prost(uint32, tag = "4")]
+	pub confirmation_height: u32,
+	#[prost(uint64, tag = "5")]
+	pub amount_satoshis: u64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PendingSweepBalance {
+	#[prost(oneof = "pending_sweep_balance::BalanceType", tags = "1, 2, 3")]
+	pub balance_type: ::core::option::Option<pending_sweep_balance::BalanceType>,
+}
+/// Nested message and enum types in `PendingSweepBalance`.
+pub mod pending_sweep_balance {
+	#[allow(clippy::derive_partial_eq_without_eq)]
+	#[derive(Clone, PartialEq, ::prost::Oneof)]
+	pub enum BalanceType {
+		#[prost(message, tag = "1")]
+		PendingBroadcast(super::PendingBroadcast),
+		#[prost(message, tag = "2")]
+		BroadcastAwaitingConfirmation(super::BroadcastAwaitingConfirmation),
+		#[prost(message, tag = "3")]
+		AwaitingThresholdConfirmations(super::AwaitingThresholdConfirmations),
+	}
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetBalancesRequest {}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetBalancesResponse {
+	/// The total balance of our on-chain wallet.
+	#[prost(uint64, tag = "1")]
+	pub total_onchain_balance_sats: u64,
+	/// The currently spendable balance of our on-chain wallet.
+	/// This includes any sufficiently confirmed funds, minus
+	/// total_anchor_channels_reserve_sats.
+	#[prost(uint64, tag = "2")]
+	pub spendable_onchain_balance_sats: u64,
+	/// The share of our total balance that we retain as an emergency reserve to (hopefully) be
+	/// able to spend the Anchor outputs when one of our channels is closed.
+	#[prost(uint64, tag = "3")]
+	pub total_anchor_channels_reserve_sats: u64,
+	/// The total balance that we would be able to claim across all our Lightning channels.
+	/// Note this excludes balances that we are unsure if we are able to claim (e.g., as we are
+	/// waiting for a preimage or for a timeout to expire). These balances will however be included
+	/// as MaybePreimageClaimableHTLC and MaybeTimeoutClaimableHTLC in lightning_balances.
+	#[prost(uint64, tag = "4")]
+	pub total_lightning_balance_sats: u64,
+	/// A detailed list of all known Lightning balances that would be claimable on channel closure.
+	/// Note that less than the listed amounts are spendable over lightning as further reserve
+	/// restrictions apply. Please refer to ChannelDetails::outbound_capacity_msat and
+	/// ChannelDetails::next_outbound_htlc_limit_msat as returned by Node::list_channels
+	/// for a better approximation of the spendable amounts.
+	#[prost(message, repeated, tag = "5")]
+	pub lightning_balances: ::prost::alloc::vec::Vec<LightningBalance>,
+	/// A detailed list of balances currently being swept from the Lightning to the on-chain
+	/// wallet.
+	/// These are balances resulting from channel closures that may have been encumbered by a
+	/// delay, but are now being claimed and useable once sufficiently confirmed on-chain.
+	/// Note that, depending on the sync status of the wallets, swept balances listed here might or
+	/// might not already be accounted for in total_onchain_balance_sats.
+	#[prost(message, repeated, tag = "6")]
+	pub pending_balances_from_channel_closures: ::prost::alloc::vec::Vec<PendingSweepBalance>,
+}

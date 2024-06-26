@@ -4,5 +4,6 @@ set +eux pipefail
 # cli command succeeds. The CLI will make requests to the server.
 pushd cli
 cargo run -- --base-url localhost:3000 node-status
+cargo run -- --base-url localhost:3000 node-balances
 
 popd

@@ -4,15 +4,17 @@ use prost::Message;
 
 use core::future::Future;
 use core::pin::Pin;
-use http_body_util::Full;
+use http_body_util::{BodyExt, Full};
 use hyper::body::{Bytes, Incoming};
 use hyper::service::Service;
 use hyper::{Request, Response};
+
 use std::sync::Arc;
 
-use protos::GetNodeStatusResponse;
+use protos::{GetNodeStatusResponse, OnchainReceiveRequest, OnchainReceiveResponse};
 
 const GET_NODE_STATUS_PATH: &str = "/status";
+const ONCHAIN_RECEIVE: &str = "/onchain/receive";
 
 type Req = Request<Incoming>;
 
@@ -53,6 +55,18 @@ impl NodeService {
 	}
 }
 
+async fn handle_onchain_receive(
+	node: Arc<Node>, request: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	// FIXME: Limit how much we read and add error checks
+	let bytes = request.into_body().collect().await.unwrap().to_bytes();
+	let _request = OnchainReceiveRequest::decode(bytes).unwrap();
+	let response = OnchainReceiveResponse {
+		address: node.onchain_payment().new_address().unwrap().to_string(),
+	};
+	Ok(Response::builder().body(Full::new(Bytes::from(response.encode_to_vec()))).unwrap())
+}
+
 impl Service<Req> for NodeService {
 	type Response = Response<Full<Bytes>>;
 	type Error = hyper::Error;
@@ -60,8 +74,10 @@ impl Service<Req> for NodeService {
 
 	fn call(&self, req: Req) -> Self::Future {
 		println!("processing request: {} {}", req.method(), req.uri().path());
+		let node = Arc::clone(&self.node);
 		match req.uri().path() {
 			GET_NODE_STATUS_PATH => self.handle_get_node_status_request(req),
+			ONCHAIN_RECEIVE => Box::pin(async { handle_onchain_receive(node, req).await }),
 			_ => self.default_response(),
 		}
 	}

@@ -4,10 +4,11 @@ use crate::error::ServerHackError;
 use prost::Message;
 
 use protos::{
-	GetBalancesRequest, GetBalancesResponse, GetNodeStatusRequest, GetNodeStatusResponse,
-	GetPaymentDetailsRequest, GetPaymentDetailsResponse, ListChannelsRequest, ListChannelsResponse,
-	OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse,
-	PaymentsHistoryRequest, PaymentsHistoryResponse,
+	Bolt11ReceiveRequest, Bolt11ReceiveResponse, GetBalancesRequest, GetBalancesResponse,
+	GetNodeStatusRequest, GetNodeStatusResponse, GetPaymentDetailsRequest,
+	GetPaymentDetailsResponse, ListChannelsRequest, ListChannelsResponse, OnchainReceiveRequest,
+	OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, PaymentsHistoryRequest,
+	PaymentsHistoryResponse,
 };
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
@@ -43,6 +44,13 @@ impl ServerHackClient {
 		&self, request: OnchainSendRequest,
 	) -> Result<OnchainSendResponse, ServerHackError> {
 		let url = format!("http://{}/onchain/send", self.base_url);
+		self.post_request(&request, &url).await
+	}
+
+	pub async fn bolt11_receive(
+		&self, request: Bolt11ReceiveRequest,
+	) -> Result<Bolt11ReceiveResponse, ServerHackError> {
+		let url = format!("http://{}/bolt11/receive", self.base_url);
 		self.post_request(&request, &url).await
 	}
 

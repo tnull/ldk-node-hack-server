@@ -68,8 +68,8 @@ pub struct OnchainSendResponse {
 pub struct Bolt11ReceiveRequest {
 	#[prost(string, tag = "1")]
 	pub description: ::prost::alloc::string::String,
-	#[prost(uint64, tag = "2")]
-	pub expiry_secs: u64,
+	#[prost(uint32, tag = "2")]
+	pub expiry_secs: u32,
 	#[prost(uint64, optional, tag = "3")]
 	pub amount_msat: ::core::option::Option<u64>,
 }

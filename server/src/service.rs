@@ -19,13 +19,14 @@ use hyper::{Request, Response};
 use std::sync::Arc;
 
 use protos::{
-	lightning_balance, pending_sweep_balance, GetNodeStatusResponse, OnchainReceiveRequest,
-	OnchainReceiveResponse,
+	lightning_balance, pending_sweep_balance, Channel, GetNodeStatusResponse, ListChannelsRequest,
+	ListChannelsResponse, OnchainReceiveRequest, OnchainReceiveResponse, Outpoint,
 };
 
-const GET_NODE_STATUS_PATH: &str = "/status";
+const GET_NODE_STATUS_PATH: &str = "/getNodeStatus";
 const ONCHAIN_RECEIVE: &str = "/onchain/receive";
 const GET_NODE_BALANCES_PATH: &str = "/getNodeBalances";
+const LIST_CHANNELS_PATH: &str = "/listChannels";
 
 type Req = Request<Incoming>;
 
@@ -243,6 +244,46 @@ async fn handle_get_balances_request(
 	Ok(Response::builder().body(Full::new(Bytes::from(msg.encode_to_vec()))).unwrap())
 }
 
+async fn handle_list_channels_request(
+	node: Arc<Node>, request: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	let bytes = request.into_body().collect().await.unwrap().to_bytes();
+	let _request = ListChannelsRequest::decode(bytes).unwrap();
+	let channels = node
+		.list_channels()
+		.iter()
+		.map(|c| Channel {
+			channel_id: c.channel_id.to_string(),
+			counterparty_node_id: c.counterparty_node_id.to_string(),
+			funding_txo: c.funding_txo.map(|o| Outpoint { txid: o.txid.to_string(), vout: o.vout }),
+			channel_value_sats: c.channel_value_sats,
+			feerate_sat_per_1000_weight: c.feerate_sat_per_1000_weight,
+			outbound_capacity_msat: c.outbound_capacity_msat,
+			inbound_capacity_msat: c.inbound_capacity_msat,
+			confirmations_required: c.confirmations_required,
+			confirmations: c.confirmations,
+			is_outbound: c.is_outbound,
+			is_channel_ready: c.is_channel_ready,
+			is_usable: c.is_usable,
+			is_public: c.is_public,
+			cltv_expiry_delta: c.cltv_expiry_delta.map(|cltv| cltv as u32),
+			counterparty_outbound_htlc_minimum_msat: c.counterparty_outbound_htlc_minimum_msat,
+			counterparty_outbound_htlc_maximum_msat: c.counterparty_outbound_htlc_maximum_msat,
+			next_outbound_htlc_limit_msat: c.next_outbound_htlc_limit_msat,
+			next_outbound_htlc_minimum_msat: c.next_outbound_htlc_minimum_msat,
+			force_close_spend_delay: c.force_close_spend_delay.map(|delay| delay as u32),
+			forwarding_fee_proportional_millionths: c
+				.config
+				.forwarding_fee_proportional_millionths(),
+			forwarding_fee_base_msat: c.config.forwarding_fee_base_msat(),
+		})
+		.collect();
+
+	let response = ListChannelsResponse { channels };
+
+	Ok(Response::builder().body(Full::new(Bytes::from(response.encode_to_vec()))).unwrap())
+}
+
 impl Service<Req> for NodeService {
 	type Response = Response<Full<Bytes>>;
 	type Error = hyper::Error;
@@ -253,8 +294,11 @@ impl Service<Req> for NodeService {
 		let node = Arc::clone(&self.node);
 		match req.uri().path() {
 			GET_NODE_STATUS_PATH => self.handle_get_node_status_request(req),
-			ONCHAIN_RECEIVE => Box::pin(handle_onchain_receive(node, req)),
-			GET_NODE_BALANCES_PATH => Box::pin(handle_get_balances_request(node, req)),
+			GET_NODE_BALANCES_PATH => {
+				Box::pin(async { handle_get_balances_request(node, req).await })
+			},
+			ONCHAIN_RECEIVE => Box::pin(async { handle_onchain_receive(node, req).await }),
+			LIST_CHANNELS_PATH => Box::pin(async { handle_list_channels_request(node, req).await }),
 			_ => self.default_response(),
 		}
 	}

@@ -71,6 +71,8 @@ services:
       electrs:
         condition: service_healthy
     build: .
+    command:
+      /bin/bash -c "./target/debug/ldk-node-hack-server ./docker-config.json"
     ports:
       - "3000:3000"
       - "9735:9735"

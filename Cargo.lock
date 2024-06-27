@@ -975,7 +975,7 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 [[package]]
 name = "ldk-node"
 version = "0.3.0"
-source = "git+https://github.com/tnull/ldk-node-hack.git?branch=main#436a90f693c0a7ee9c326e2cd9c3078f51a17aff"
+source = "git+https://github.com/tnull/ldk-node-hack.git?branch=main#fbad621a89b298d9bc7e8a56badddb2094284d2a"
 dependencies = [
  "bdk",
  "bip39",

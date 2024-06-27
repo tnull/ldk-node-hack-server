@@ -25,12 +25,13 @@ use std::sync::Arc;
 
 use protos::{
 	lightning_balance, pending_sweep_balance, Channel, CloseChannelRequest, CloseChannelResponse,
-	ForceCloseChannelRequest, ForceCloseChannelResponse, GetNodeStatusResponse,
-	GetPaymentDetailsRequest, ListChannelsRequest, ListChannelsResponse, OnchainReceiveRequest,
-	OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, OpenChannelRequest,
-	OpenChannelResponse, Outpoint,
+	ForceCloseChannelRequest, ForceCloseChannelResponse, GetNodeIdRequest, GetNodeIdResponse,
+	GetNodeStatusResponse, GetPaymentDetailsRequest, ListChannelsRequest, ListChannelsResponse,
+	OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse,
+	OpenChannelRequest, OpenChannelResponse, Outpoint,
 };
 
+const GET_NODE_ID_PATH: &str = "/getNodeId";
 const GET_NODE_STATUS_PATH: &str = "/getNodeStatus";
 const ONCHAIN_RECEIVE: &str = "/onchain/receive";
 const ONCHAIN_SEND: &str = "/onchain/send";
@@ -64,6 +65,7 @@ impl Service<Req> for NodeService {
 		println!("processing request: {} {}", req.method(), req.uri().path());
 		let node = Arc::clone(&self.node);
 		match req.uri().path() {
+			GET_NODE_ID_PATH => Box::pin(handle_get_node_id_request(node, req)),
 			GET_NODE_STATUS_PATH => Box::pin(handle_get_node_status_request(node, req)),
 			GET_NODE_BALANCES_PATH => Box::pin(handle_get_balances_request(node, req)),
 			ONCHAIN_RECEIVE => Box::pin(handle_onchain_receive(node, req)),
@@ -77,6 +79,17 @@ impl Service<Req> for NodeService {
 			_ => Box::pin(async { Ok(make_response(b"UNKNOWN REQUEST".to_vec())) }),
 		}
 	}
+}
+
+async fn handle_get_node_id_request(
+	node: Arc<Node>, request: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	let bytes = request.into_body().collect().await.unwrap().to_bytes();
+	let _request = GetNodeIdRequest::decode(bytes).unwrap();
+
+	let node_id = node.node_id();
+	let msg = GetNodeIdResponse { node_id: node_id.to_string() };
+	Ok(make_response(msg.encode_to_vec()))
 }
 
 async fn handle_get_node_status_request(

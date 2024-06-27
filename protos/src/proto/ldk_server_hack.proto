@@ -1,6 +1,14 @@
 syntax = "proto3";
 package ldk_server_hack;
 
+message GetNodeIdRequest {
+}
+
+message GetNodeIdResponse {
+
+  string node_id = 1;
+}
+
 message GetNodeStatusRequest {
 }
 

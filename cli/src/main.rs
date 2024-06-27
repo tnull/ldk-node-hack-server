@@ -1,8 +1,8 @@
 use clap::{Parser, Subcommand};
 use client::ServerHackClient;
 use protos::{
-	GetBalancesRequest, GetNodeStatusRequest, GetPaymentDetailsRequest, ListChannelsRequest,
-	OnchainReceiveRequest, OnchainSendRequest, PaymentsHistoryRequest,
+	Bolt11ReceiveRequest, GetBalancesRequest, GetNodeStatusRequest, GetPaymentDetailsRequest,
+	ListChannelsRequest, OnchainReceiveRequest, OnchainSendRequest, PaymentsHistoryRequest,
 };
 
 #[derive(Parser, Debug)]
@@ -22,6 +22,11 @@ enum Commands {
 	SendOnchain {
 		address: String,
 		amount_sats: Option<u64>,
+	},
+	Bolt11Receive {
+		description: String,
+		expiry_secs: u32,
+		amount_msat: Option<u64>,
 	},
 	NodeBalances,
 	ListChannels,
@@ -100,6 +105,19 @@ async fn main() {
 		},
 		Commands::PaymentDetails { payment_id } => {
 			match client.get_payment_details(GetPaymentDetailsRequest { payment_id }).await {
+				Ok(response) => {
+					println!("Payment details: {:?}", response);
+				},
+				Err(e) => {
+					eprintln!("Error getting payment details: {:?}", e);
+				},
+			};
+		},
+		Commands::Bolt11Receive { description, expiry_secs, amount_msat } => {
+			match client
+				.bolt11_receive(Bolt11ReceiveRequest { description, expiry_secs, amount_msat })
+				.await
+			{
 				Ok(response) => {
 					println!("Payment details: {:?}", response);
 				},

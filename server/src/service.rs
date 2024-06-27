@@ -24,17 +24,18 @@ use hyper::{Request, Response, StatusCode};
 use std::sync::Arc;
 
 use protos::{
-	lightning_balance, pending_sweep_balance, Channel, CloseChannelRequest, CloseChannelResponse,
-	ForceCloseChannelRequest, ForceCloseChannelResponse, GetNodeIdRequest, GetNodeIdResponse,
-	GetNodeStatusResponse, GetPaymentDetailsRequest, ListChannelsRequest, ListChannelsResponse,
-	OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse,
-	OpenChannelRequest, OpenChannelResponse, Outpoint,
+	lightning_balance, pending_sweep_balance, Bolt11ReceiveRequest, Bolt11ReceiveResponse, Channel,
+	CloseChannelRequest, CloseChannelResponse, ForceCloseChannelRequest, ForceCloseChannelResponse,
+	GetNodeIdRequest, GetNodeIdResponse, GetNodeStatusResponse, GetPaymentDetailsRequest,
+	ListChannelsRequest, ListChannelsResponse, OnchainReceiveRequest, OnchainReceiveResponse,
+	OnchainSendRequest, OnchainSendResponse, OpenChannelRequest, OpenChannelResponse, Outpoint,
 };
 
 const GET_NODE_ID_PATH: &str = "/getNodeId";
 const GET_NODE_STATUS_PATH: &str = "/getNodeStatus";
 const ONCHAIN_RECEIVE: &str = "/onchain/receive";
 const ONCHAIN_SEND: &str = "/onchain/send";
+const BOLT11_RECEIVE: &str = "/bolt11/receive";
 const GET_NODE_BALANCES_PATH: &str = "/getNodeBalances";
 const PAYMENTS_HISTORY_PATH: &str = "/listPaymentsHistory";
 const GET_PAYMENT_DETAILS_PATH: &str = "/getPaymentDetails";
@@ -70,6 +71,7 @@ impl Service<Req> for NodeService {
 			GET_NODE_BALANCES_PATH => Box::pin(handle_get_balances_request(node, req)),
 			ONCHAIN_RECEIVE => Box::pin(handle_onchain_receive(node, req)),
 			ONCHAIN_SEND => Box::pin(handle_onchain_send(node, req)),
+			BOLT11_RECEIVE => Box::pin(handle_bolt11_receive_request(node, req)),
 			LIST_CHANNELS_PATH => Box::pin(handle_list_channels_request(node, req)),
 			OPEN_CHANNEL_PATH => Box::pin(handle_open_channel(node, req)),
 			CLOSE_CHANNEL_PATH => Box::pin(handle_close_channel(node, req)),
@@ -314,6 +316,21 @@ async fn handle_get_balances_request(
 		pending_balances_from_channel_closures,
 	};
 	Ok(make_response(msg.encode_to_vec()))
+}
+
+async fn handle_bolt11_receive_request(
+	node: Arc<Node>, request: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	let bytes = request.into_body().collect().await.unwrap().to_bytes();
+	let request = Bolt11ReceiveRequest::decode(bytes).unwrap();
+	let invoice = node
+		.bolt11_payment()
+		.receive(request.amount_msat.unwrap(), &request.description, request.expiry_secs)
+		.unwrap();
+
+	let response = Bolt11ReceiveResponse { invoice: invoice.to_string() };
+
+	Ok(make_response(response.encode_to_vec()))
 }
 
 async fn handle_list_channels_request(

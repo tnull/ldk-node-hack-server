@@ -65,7 +65,7 @@ message Bolt11ReceiveRequest {
 
   string description = 1;
 
-  uint64 expiry_secs = 2;
+  uint32 expiry_secs = 2;
 
   optional uint64 amount_msat = 3;
 }

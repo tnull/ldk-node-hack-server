@@ -1,8 +1,6 @@
 use clap::{Parser, Subcommand};
 use client::ServerHackClient;
-use protos::{
-	GetBalancesRequest, GetNodeStatusRequest, GetNodeStatusRequest, OnchainReceiveRequest,
-};
+use protos::{GetBalancesRequest, GetNodeStatusRequest, OnchainReceiveRequest};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

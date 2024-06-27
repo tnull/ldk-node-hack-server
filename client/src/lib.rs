@@ -40,7 +40,7 @@ impl ServerHackClient {
 	pub async fn get_node_balances(
 		&self, request: GetBalancesRequest,
 	) -> Result<GetBalancesResponse, ServerHackError> {
-		let url = format!("http://{}/balances", self.base_url);
+		let url = format!("http://{}/getNodeBalances", self.base_url);
 		self.post_request(&request, &url).await
 	}
 

@@ -296,7 +296,7 @@ message LightningBalance {
 }
 
 message PendingBroadcast {
-  optional string channel_id = 1;
+  string channel_id = 1;
   uint64 amount_satoshis = 2;
 }
 

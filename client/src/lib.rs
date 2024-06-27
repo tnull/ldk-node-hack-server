@@ -79,10 +79,17 @@ impl ServerHackClient {
 		let payload = response_raw.bytes().await?;
 
 		if status.is_success() {
-			let response = Rs::decode(&payload[..])?;
-			Ok(response)
+			Rs::decode(&payload[..]).map_err(|_| {
+				ServerHackError::FailedRequest(
+					reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+					String::from_utf8(payload.to_vec()).unwrap(),
+				)
+			})
 		} else {
-			Err(ServerHackError::FailedRequest(status, payload.to_vec()))
+			Err(ServerHackError::FailedRequest(
+				status,
+				String::from_utf8(payload.to_vec()).unwrap(),
+			))
 		}
 	}
 }

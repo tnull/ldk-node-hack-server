@@ -6,9 +6,9 @@ jobs:
   build:
     strategy:
       matrix:
-        toolchain: [ 1.70.0 ]
+        toolchain: [ 1.74.1 ]
         include:
-          - toolchain: 1.70.0
+          - toolchain: 1.74.1
             check-fmt: true
     runs-on: ubuntu-latest
     steps:

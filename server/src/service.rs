@@ -1,14 +1,16 @@
+use ldk_node::bitcoin::secp256k1::PublicKey;
 use ldk_node::bitcoin::Address;
 use ldk_node::lightning::chain::BestBlock;
+use ldk_node::lightning::ln::msgs::SocketAddress;
 use ldk_node::payment::{PaymentDetails, PaymentDirection, PaymentKind, PaymentStatus};
 use ldk_node::LightningBalance::{
 	ClaimableAwaitingConfirmations, ClaimableOnChannelClose, ContentiousClaimable,
 	CounterpartyRevokedOutputClaimable, MaybePreimageClaimableHTLC, MaybeTimeoutClaimableHTLC,
 };
-use ldk_node::Node;
 use ldk_node::PendingSweepBalance::{
 	AwaitingThresholdConfirmations, BroadcastAwaitingConfirmation, PendingBroadcast,
 };
+use ldk_node::{Node, UserChannelId};
 use prost::Message;
 
 use core::future::Future;
@@ -22,18 +24,23 @@ use hyper::{Request, Response, StatusCode};
 use std::sync::Arc;
 
 use protos::{
-	lightning_balance, pending_sweep_balance, Channel, GetNodeStatusResponse,
+	lightning_balance, pending_sweep_balance, Channel, CloseChannelRequest, CloseChannelResponse,
+	ForceCloseChannelRequest, ForceCloseChannelResponse, GetNodeStatusResponse,
 	GetPaymentDetailsRequest, ListChannelsRequest, ListChannelsResponse, OnchainReceiveRequest,
-	OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, Outpoint,
+	OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, OpenChannelRequest,
+	OpenChannelResponse, Outpoint,
 };
 
 const GET_NODE_STATUS_PATH: &str = "/getNodeStatus";
 const ONCHAIN_RECEIVE: &str = "/onchain/receive";
 const ONCHAIN_SEND: &str = "/onchain/send";
 const GET_NODE_BALANCES_PATH: &str = "/getNodeBalances";
-const LIST_CHANNELS_PATH: &str = "/listChannels";
 const PAYMENTS_HISTORY_PATH: &str = "/listPaymentsHistory";
 const GET_PAYMENT_DETAILS_PATH: &str = "/getPaymentDetails";
+const LIST_CHANNELS_PATH: &str = "/channel/list";
+const OPEN_CHANNEL_PATH: &str = "/channel/open";
+const CLOSE_CHANNEL_PATH: &str = "/channel/close";
+const FORCE_CLOSE_CHANNEL_PATH: &str = "/channel/force-close";
 
 type Req = Request<Incoming>;
 
@@ -62,6 +69,9 @@ impl Service<Req> for NodeService {
 			ONCHAIN_RECEIVE => Box::pin(handle_onchain_receive(node, req)),
 			ONCHAIN_SEND => Box::pin(handle_onchain_send(node, req)),
 			LIST_CHANNELS_PATH => Box::pin(handle_list_channels_request(node, req)),
+			OPEN_CHANNEL_PATH => Box::pin(handle_open_channel(node, req)),
+			CLOSE_CHANNEL_PATH => Box::pin(handle_close_channel(node, req)),
+			FORCE_CLOSE_CHANNEL_PATH => Box::pin(handle_force_close_channel(node, req)),
 			PAYMENTS_HISTORY_PATH => Box::pin(handle_get_payment_history_request(node, req)),
 			GET_PAYMENT_DETAILS_PATH => Box::pin(handle_get_payment_details_request(node, req)),
 			_ => Box::pin(async { Ok(make_response(b"UNKNOWN REQUEST".to_vec())) }),
@@ -359,6 +369,55 @@ async fn handle_get_payment_details_request(
 		.status(StatusCode::NOT_FOUND)
 		.body(Full::new(Bytes::from(b"Payment not found".to_vec())))
 		.unwrap())
+}
+
+async fn handle_open_channel(
+	node: Arc<Node>, request: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	let bytes = request.into_body().collect().await.unwrap().to_bytes();
+	let request = OpenChannelRequest::decode(bytes).unwrap();
+	let node_id = PublicKey::from_str(&request.node_id).unwrap();
+	let address = SocketAddress::from_str(&request.address).unwrap();
+	let user_channel_id = node
+		.connect_open_channel(
+			node_id,
+			address,
+			request.channel_amount_sats,
+			request.push_to_counterparty_msat,
+			None,
+			request.announce_channel,
+		)
+		.unwrap();
+	let msg = OpenChannelResponse { user_channel_id: user_channel_id.0.to_be_bytes().to_vec() };
+	Ok(make_response(msg.encode_to_vec()))
+}
+
+async fn handle_close_channel(
+	node: Arc<Node>, request: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	let bytes = request.into_body().collect().await.unwrap().to_bytes();
+	let request = CloseChannelRequest::decode(bytes).unwrap();
+	let mut be_bytes = [0u8; 16];
+	be_bytes.copy_from_slice(&request.user_channel_id);
+	let user_channel_id = UserChannelId(u128::from_be_bytes(be_bytes));
+	let counterparty_node_id = PublicKey::from_str(&request.counterparty_node_id).unwrap();
+	node.close_channel(&user_channel_id, counterparty_node_id).unwrap();
+	let msg = CloseChannelResponse {};
+	Ok(make_response(msg.encode_to_vec()))
+}
+
+async fn handle_force_close_channel(
+	node: Arc<Node>, request: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	let bytes = request.into_body().collect().await.unwrap().to_bytes();
+	let request = ForceCloseChannelRequest::decode(bytes).unwrap();
+	let mut be_bytes = [0u8; 16];
+	be_bytes.copy_from_slice(&request.user_channel_id);
+	let user_channel_id = UserChannelId(u128::from_be_bytes(be_bytes));
+	let counterparty_node_id = PublicKey::from_str(&request.counterparty_node_id).unwrap();
+	node.force_close_channel(&user_channel_id, counterparty_node_id).unwrap();
+	let msg = ForceCloseChannelResponse {};
+	Ok(make_response(msg.encode_to_vec()))
 }
 
 fn make_response(response: Vec<u8>) -> Response<Full<Bytes>> {

@@ -3,7 +3,12 @@ mod error;
 use crate::error::ServerHackError;
 use prost::Message;
 
-use protos::{GetBalancesRequest, GetBalancesResponse, GetNodeStatusRequest, GetNodeStatusResponse, GetPaymentDetailsRequest, GetPaymentDetailsResponse, ListChannelsRequest, OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, PaymentsHistoryRequest, PaymentsHistoryResponse};
+use protos::{
+	GetBalancesRequest, GetBalancesResponse, GetNodeStatusRequest, GetNodeStatusResponse,
+	GetPaymentDetailsRequest, GetPaymentDetailsResponse, ListChannelsRequest,
+	OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse,
+	PaymentsHistoryRequest, PaymentsHistoryResponse,
+};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
 

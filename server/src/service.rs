@@ -25,9 +25,10 @@ use std::sync::Arc;
 
 use protos::{
 	lightning_balance, pending_sweep_balance, Channel, CloseChannelRequest, CloseChannelResponse,
-	GetNodeStatusResponse, GetPaymentDetailsRequest, ListChannelsRequest, ListChannelsResponse,
-	OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse,
-	OpenChannelRequest, OpenChannelResponse, Outpoint,
+	ForceCloseChannelRequest, ForceCloseChannelResponse, GetNodeStatusResponse,
+	GetPaymentDetailsRequest, ListChannelsRequest, ListChannelsResponse, OnchainReceiveRequest,
+	OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, OpenChannelRequest,
+	OpenChannelResponse, Outpoint,
 };
 
 const GET_NODE_STATUS_PATH: &str = "/getNodeStatus";
@@ -39,6 +40,7 @@ const GET_PAYMENT_DETAILS_PATH: &str = "/getPaymentDetails";
 const LIST_CHANNELS_PATH: &str = "/channel/list";
 const OPEN_CHANNEL_PATH: &str = "/channel/open";
 const CLOSE_CHANNEL_PATH: &str = "/channel/close";
+const FORCE_CLOSE_CHANNEL_PATH: &str = "/channel/force-close";
 
 type Req = Request<Incoming>;
 
@@ -69,6 +71,7 @@ impl Service<Req> for NodeService {
 			LIST_CHANNELS_PATH => Box::pin(handle_list_channels_request(node, req)),
 			OPEN_CHANNEL_PATH => Box::pin(handle_open_channel(node, req)),
 			CLOSE_CHANNEL_PATH => Box::pin(handle_close_channel(node, req)),
+			FORCE_CLOSE_CHANNEL_PATH => Box::pin(handle_force_close_channel(node, req)),
 			PAYMENTS_HISTORY_PATH => Box::pin(handle_get_payment_history_request(node, req)),
 			GET_PAYMENT_DETAILS_PATH => Box::pin(handle_get_payment_details_request(node, req)),
 			_ => Box::pin(async { Ok(make_response(b"UNKNOWN REQUEST".to_vec())) }),
@@ -385,8 +388,7 @@ async fn handle_open_channel(
 			request.announce_channel,
 		)
 		.unwrap();
-	let msg =
-		OpenChannelResponse { user_channel_id: user_channel_id.0.to_be_bytes().to_vec() };
+	let msg = OpenChannelResponse { user_channel_id: user_channel_id.0.to_be_bytes().to_vec() };
 	Ok(make_response(msg.encode_to_vec()))
 }
 
@@ -401,6 +403,20 @@ async fn handle_close_channel(
 	let counterparty_node_id = PublicKey::from_str(&request.counterparty_node_id).unwrap();
 	node.close_channel(&user_channel_id, counterparty_node_id).unwrap();
 	let msg = CloseChannelResponse {};
+	Ok(make_response(msg.encode_to_vec()))
+}
+
+async fn handle_force_close_channel(
+	node: Arc<Node>, request: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	let bytes = request.into_body().collect().await.unwrap().to_bytes();
+	let request = ForceCloseChannelRequest::decode(bytes).unwrap();
+	let mut be_bytes = [0u8; 16];
+	be_bytes.copy_from_slice(&request.user_channel_id);
+	let user_channel_id = UserChannelId(u128::from_be_bytes(be_bytes));
+	let counterparty_node_id = PublicKey::from_str(&request.counterparty_node_id).unwrap();
+	node.force_close_channel(&user_channel_id, counterparty_node_id).unwrap();
+	let msg = ForceCloseChannelResponse {};
 	Ok(make_response(msg.encode_to_vec()))
 }
 

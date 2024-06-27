@@ -239,3 +239,123 @@ message Outpoint {
   // The index of the referenced output in its transaction's vout.
   uint32 vout = 2;
 }
+
+message ClaimableOnChannelClose {
+  string channel_id = 1;
+  string counterparty_node_id = 2;
+  uint64 amount_satoshis = 3;
+}
+
+message ClaimableAwaitingConfirmations {
+  string channel_id = 1;
+  string counterparty_node_id = 2;
+  uint64 amount_satoshis = 3;
+  uint32 confirmation_height = 4;
+}
+
+message ContentiousClaimable {
+  string channel_id = 1;
+  string counterparty_node_id = 2;
+  uint64 amount_satoshis = 3;
+  uint32 timeout_height = 4;
+  string payment_hash = 5;
+  string payment_preimage = 6;
+}
+
+message MaybeTimeoutClaimableHTLC {
+  string channel_id = 1;
+  string counterparty_node_id = 2;
+  uint64 amount_satoshis = 3;
+  uint32 claimable_height = 4;
+  string payment_hash = 5;
+}
+
+message MaybePreimageClaimableHTLC {
+  string channel_id = 1;
+  string counterparty_node_id = 2;
+  uint64 amount_satoshis = 3;
+  uint32 expiry_height = 4;
+  string payment_hash = 5;
+}
+
+message CounterpartyRevokedOutputClaimable {
+  string channel_id = 1;
+  string counterparty_node_id = 2;
+  uint64 amount_satoshis = 3;
+}
+
+message LightningBalance {
+  oneof balance_type {
+      ClaimableOnChannelClose claimable_on_channel_close = 1;
+      ClaimableAwaitingConfirmations claimable_awaiting_confirmations = 2;
+      ContentiousClaimable contentious_claimable = 3;
+      MaybeTimeoutClaimableHTLC maybe_timeout_claimable_htlc = 4;
+      MaybePreimageClaimableHTLC maybe_preimage_claimable_htlc = 5;
+      CounterpartyRevokedOutputClaimable counterparty_revoked_output_claimable = 6;
+  }
+}
+
+message PendingBroadcast {
+  string channel_id = 1;
+  uint64 amount_satoshis = 2;
+}
+
+message BroadcastAwaitingConfirmation {
+  optional string channel_id = 1;
+  uint32 latest_broadcast_height = 2;
+  string latest_spending_txid = 3;
+  uint64 amount_satoshis = 4;
+}
+
+message AwaitingThresholdConfirmations {
+  optional string channel_id = 1;
+  string latest_spending_txid = 2;
+  string confirmation_hash = 3;
+  uint32 confirmation_height = 4;
+  uint64 amount_satoshis = 5;
+}
+
+message PendingSweepBalance {
+  oneof balance_type {
+      PendingBroadcast pending_broadcast = 1;
+      BroadcastAwaitingConfirmation broadcast_awaiting_confirmation = 2;
+      AwaitingThresholdConfirmations awaiting_threshold_confirmations = 3;
+  }
+}
+
+message GetBalancesRequest {}
+
+message GetBalancesResponse {
+    // The total balance of our on-chain wallet.
+    uint64 total_onchain_balance_sats = 1;
+    
+    // The currently spendable balance of our on-chain wallet.
+    // This includes any sufficiently confirmed funds, minus
+    // total_anchor_channels_reserve_sats.
+    uint64 spendable_onchain_balance_sats = 2;
+    
+    // The share of our total balance that we retain as an emergency reserve to (hopefully) be
+    // able to spend the Anchor outputs when one of our channels is closed.
+    uint64 total_anchor_channels_reserve_sats = 3;
+    
+    // The total balance that we would be able to claim across all our Lightning channels.
+    // Note this excludes balances that we are unsure if we are able to claim (e.g., as we are
+    // waiting for a preimage or for a timeout to expire). These balances will however be included
+    // as MaybePreimageClaimableHTLC and MaybeTimeoutClaimableHTLC in lightning_balances.
+    uint64 total_lightning_balance_sats = 4;
+    
+    // A detailed list of all known Lightning balances that would be claimable on channel closure.
+    // Note that less than the listed amounts are spendable over lightning as further reserve
+    // restrictions apply. Please refer to ChannelDetails::outbound_capacity_msat and
+    // ChannelDetails::next_outbound_htlc_limit_msat as returned by Node::list_channels
+    // for a better approximation of the spendable amounts.
+    repeated LightningBalance lightning_balances = 5;
+    
+    // A detailed list of balances currently being swept from the Lightning to the on-chain
+    // wallet.
+    // These are balances resulting from channel closures that may have been encumbered by a
+    // delay, but are now being claimed and useable once sufficiently confirmed on-chain.
+    // Note that, depending on the sync status of the wallets, swept balances listed here might or
+    // might not already be accounted for in total_onchain_balance_sats.
+    repeated PendingSweepBalance pending_balances_from_channel_closures = 6;
+}

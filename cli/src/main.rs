@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use client::ServerHackClient;
-use protos::{GetNodeStatusRequest, OnchainReceiveRequest};
+use protos::{GetBalancesRequest, GetNodeStatusRequest, OnchainReceiveRequest};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -14,8 +14,9 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-	NodeStatus {},
-	NewAddress {},
+	NodeStatus,
+	NewAddress,
+	NodeBalances,
 }
 
 #[tokio::main]
@@ -34,13 +35,23 @@ async fn main() {
 				},
 			};
 		},
-		Commands::NewAddress {} => {
+		Commands::NewAddress => {
 			match client.get_new_funding_address(OnchainReceiveRequest {}).await {
 				Ok(address) => {
 					println!("New address: {:?}", address);
 				},
 				Err(e) => {
 					eprintln!("Error getting new funding address: {:?}", e);
+				},
+			}
+		},
+		Commands::NodeBalances => {
+			match client.get_node_balances(GetBalancesRequest {}).await {
+				Ok(response) => {
+					println!("Node balances: {:?}", response);
+				},
+				Err(e) => {
+					eprintln!("Error getting node balances: {:?}", e);
 				},
 			};
 		},

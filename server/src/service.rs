@@ -1,5 +1,12 @@
 use ldk_node::lightning::chain::BestBlock;
+use ldk_node::LightningBalance::{
+	ClaimableAwaitingConfirmations, ClaimableOnChannelClose, ContentiousClaimable,
+	CounterpartyRevokedOutputClaimable, MaybePreimageClaimableHTLC, MaybeTimeoutClaimableHTLC,
+};
 use ldk_node::Node;
+use ldk_node::PendingSweepBalance::{
+	AwaitingThresholdConfirmations, BroadcastAwaitingConfirmation, PendingBroadcast,
+};
 use prost::Message;
 
 use core::future::Future;
@@ -11,10 +18,14 @@ use hyper::{Request, Response};
 
 use std::sync::Arc;
 
-use protos::{GetNodeStatusResponse, OnchainReceiveRequest, OnchainReceiveResponse};
+use protos::{
+	lightning_balance, pending_sweep_balance, GetNodeStatusResponse, OnchainReceiveRequest,
+	OnchainReceiveResponse,
+};
 
 const GET_NODE_STATUS_PATH: &str = "/status";
 const ONCHAIN_RECEIVE: &str = "/onchain/receive";
+const GET_NODE_BALANCES_PATH: &str = "/getNodeBalances";
 
 type Req = Request<Incoming>;
 
@@ -67,6 +78,171 @@ async fn handle_onchain_receive(
 	Ok(Response::builder().body(Full::new(Bytes::from(response.encode_to_vec()))).unwrap())
 }
 
+async fn handle_get_balances_request(
+	node: Arc<Node>, _: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	let balance_details = node.list_balances();
+	let lightning_balances = balance_details
+		.lightning_balances
+		.into_iter()
+		.map(|lightning_balance| match lightning_balance {
+			ClaimableOnChannelClose { channel_id, counterparty_node_id, amount_satoshis } => {
+				protos::LightningBalance {
+					balance_type: Some(lightning_balance::BalanceType::ClaimableOnChannelClose(
+						protos::ClaimableOnChannelClose {
+							channel_id: channel_id.to_string(),
+							counterparty_node_id: counterparty_node_id.to_string(),
+							amount_satoshis,
+						},
+					)),
+				}
+			},
+			ClaimableAwaitingConfirmations {
+				channel_id,
+				counterparty_node_id,
+				amount_satoshis,
+				confirmation_height,
+			} => protos::LightningBalance {
+				balance_type: Some(lightning_balance::BalanceType::ClaimableAwaitingConfirmations(
+					protos::ClaimableAwaitingConfirmations {
+						channel_id: channel_id.to_string(),
+						counterparty_node_id: counterparty_node_id.to_string(),
+						amount_satoshis,
+						confirmation_height,
+					},
+				)),
+			},
+			ContentiousClaimable {
+				channel_id,
+				counterparty_node_id,
+				amount_satoshis,
+				timeout_height,
+				payment_hash,
+				payment_preimage,
+			} => protos::LightningBalance {
+				balance_type: Some(lightning_balance::BalanceType::ContentiousClaimable(
+					protos::ContentiousClaimable {
+						channel_id: channel_id.to_string(),
+						counterparty_node_id: counterparty_node_id.to_string(),
+						amount_satoshis,
+						timeout_height,
+						payment_hash: payment_hash.to_string(),
+						payment_preimage: payment_preimage.to_string(),
+					},
+				)),
+			},
+			MaybeTimeoutClaimableHTLC {
+				channel_id,
+				counterparty_node_id,
+				amount_satoshis,
+				claimable_height,
+				payment_hash,
+			} => protos::LightningBalance {
+				balance_type: Some(lightning_balance::BalanceType::MaybeTimeoutClaimableHtlc(
+					protos::MaybeTimeoutClaimableHtlc {
+						channel_id: channel_id.to_string(),
+						counterparty_node_id: counterparty_node_id.to_string(),
+						amount_satoshis,
+						claimable_height,
+						payment_hash: payment_hash.to_string(),
+					},
+				)),
+			},
+			MaybePreimageClaimableHTLC {
+				channel_id,
+				counterparty_node_id,
+				amount_satoshis,
+				expiry_height,
+				payment_hash,
+			} => protos::LightningBalance {
+				balance_type: Some(lightning_balance::BalanceType::MaybePreimageClaimableHtlc(
+					protos::MaybePreimageClaimableHtlc {
+						channel_id: channel_id.to_string(),
+						counterparty_node_id: counterparty_node_id.to_string(),
+						amount_satoshis,
+						expiry_height,
+						payment_hash: payment_hash.to_string(),
+					},
+				)),
+			},
+			CounterpartyRevokedOutputClaimable {
+				channel_id,
+				counterparty_node_id,
+				amount_satoshis,
+			} => protos::LightningBalance {
+				balance_type: Some(
+					lightning_balance::BalanceType::CounterpartyRevokedOutputClaimable(
+						protos::CounterpartyRevokedOutputClaimable {
+							channel_id: channel_id.to_string(),
+							counterparty_node_id: counterparty_node_id.to_string(),
+							amount_satoshis,
+						},
+					),
+				),
+			},
+		})
+		.collect();
+	let pending_balances_from_channel_closures = balance_details
+		.pending_balances_from_channel_closures
+		.into_iter()
+		.map(|pending_sweep_balance| match pending_sweep_balance {
+			PendingBroadcast { channel_id, amount_satoshis } => protos::PendingSweepBalance {
+				balance_type: Some(pending_sweep_balance::BalanceType::PendingBroadcast(
+					protos::PendingBroadcast {
+						channel_id: channel_id.map(|id| id.to_string()),
+						amount_satoshis,
+					},
+				)),
+			},
+			BroadcastAwaitingConfirmation {
+				channel_id,
+				latest_broadcast_height,
+				latest_spending_txid,
+				amount_satoshis,
+			} => protos::PendingSweepBalance {
+				balance_type: Some(
+					pending_sweep_balance::BalanceType::BroadcastAwaitingConfirmation(
+						protos::BroadcastAwaitingConfirmation {
+							channel_id: channel_id.map(|id| id.to_string()),
+							latest_broadcast_height,
+							latest_spending_txid: latest_spending_txid.to_string(),
+							amount_satoshis,
+						},
+					),
+				),
+			},
+			AwaitingThresholdConfirmations {
+				channel_id,
+				latest_spending_txid,
+				confirmation_hash,
+				confirmation_height,
+				amount_satoshis,
+			} => protos::PendingSweepBalance {
+				balance_type: Some(
+					pending_sweep_balance::BalanceType::AwaitingThresholdConfirmations(
+						protos::AwaitingThresholdConfirmations {
+							channel_id: channel_id.map(|id| id.to_string()),
+							latest_spending_txid: latest_spending_txid.to_string(),
+							confirmation_hash: confirmation_hash.to_string(),
+							confirmation_height,
+							amount_satoshis,
+						},
+					),
+				),
+			},
+		})
+		.collect();
+	let msg = protos::GetBalancesResponse {
+		total_onchain_balance_sats: balance_details.total_onchain_balance_sats,
+		spendable_onchain_balance_sats: balance_details.spendable_onchain_balance_sats,
+		total_anchor_channels_reserve_sats: balance_details.total_anchor_channels_reserve_sats,
+		total_lightning_balance_sats: balance_details.total_lightning_balance_sats,
+		lightning_balances,
+		pending_balances_from_channel_closures,
+	};
+	Ok(Response::builder().body(Full::new(Bytes::from(msg.encode_to_vec()))).unwrap())
+}
+
 impl Service<Req> for NodeService {
 	type Response = Response<Full<Bytes>>;
 	type Error = hyper::Error;
@@ -77,7 +253,8 @@ impl Service<Req> for NodeService {
 		let node = Arc::clone(&self.node);
 		match req.uri().path() {
 			GET_NODE_STATUS_PATH => self.handle_get_node_status_request(req),
-			ONCHAIN_RECEIVE => Box::pin(async { handle_onchain_receive(node, req).await }),
+			ONCHAIN_RECEIVE => Box::pin(handle_onchain_receive(node, req)),
+			GET_NODE_BALANCES_PATH => Box::pin(handle_get_balances_request(node, req)),
 			_ => self.default_response(),
 		}
 	}

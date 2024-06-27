@@ -396,14 +396,14 @@ message Bolt11Jit {
 }
 
 message Bolt12Offer {
-  string hash = 1;
+  optional string hash = 1;
   optional string preimage = 2;
   optional bytes secret = 3;
-  string offer_id = 4;
+  bytes offer_id = 4;
 }
 
 message Bolt12Refund {
-  string hash = 1;
+  optional string hash = 1;
   optional string preimage = 2;
   optional bytes secret = 3;
 }
@@ -427,4 +427,10 @@ enum PaymentStatus {
   PENDING = 0;
   SUCCEEDED = 1;
   FAILED = 2;
+}
+
+message PaymentsHistoryRequest {}
+
+message PaymentsHistoryResponse {
+  repeated PaymentDetails payments = 1;
 }

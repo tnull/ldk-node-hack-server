@@ -24,10 +24,10 @@ impl ServerHackClient {
 	}
 
 	pub async fn get_node_status(
-		&self, request: GetNodeStatusRequest,
+		&self, request: &GetNodeStatusRequest,
 	) -> Result<GetNodeStatusResponse, ServerHackError> {
 		let url = format!("http://{}/getNodeStatus", self.base_url);
-		self.post_request(&request, &url).await
+		self.post_request(request, &url).await
 	}
 
 	pub async fn get_new_funding_address(

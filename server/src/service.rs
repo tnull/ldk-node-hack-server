@@ -87,7 +87,7 @@ impl NodeService {
 					secret,
 					lsp_fee_limits,
 				} => protos::PaymentKind {
-					kind: Some(protos::payment_kind::Kind::Bolt11jit(protos::Bolt11Jit {
+					kind: Some(protos::payment_kind::Kind::Bolt11Jit(protos::Bolt11Jit {
 						hash: hash.to_string(),
 						preimage: preimage.map(|it| it.to_string()),
 						secret: secret.map(|it| it.0.to_vec()),

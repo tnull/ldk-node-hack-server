@@ -373,7 +373,7 @@ message PaymentKind {
   oneof kind {
       Onchain onchain = 1;
       Bolt11 bolt11 = 2;
-      Bolt11Jit bolt11jit = 3;
+      Bolt11Jit bolt11Jit = 3;
       Bolt12Offer bolt12offer = 4;
       Bolt12Refund bolt12refund = 5;
       Spontaneous spontaneous = 6;

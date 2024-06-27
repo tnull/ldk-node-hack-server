@@ -5,5 +5,6 @@ set +eux pipefail
 pushd cli
 cargo run -- --base-url localhost:3000 node-status
 cargo run -- --base-url localhost:3000 node-balances
+cargo run -- --base-url localhost:3000 payments-history
 
 popd

@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use client::ServerHackClient;
 use protos::{
 	GetBalancesRequest, GetNodeStatusRequest, ListChannelsRequest, OnchainReceiveRequest,
+	PaymentsHistoryRequest,
 };
 
 #[derive(Parser, Debug)]
@@ -16,10 +17,11 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-	NodeStatus {},
-	NodeBalances {},
-	NewAddress {},
-	ListChannels {},
+	NodeStatus,
+	NewAddress,
+	NodeBalances,
+	ListChannels,
+	PaymentsHistory,
 }
 
 #[tokio::main]
@@ -28,8 +30,8 @@ async fn main() {
 	let client = ServerHackClient::new(cli.base_url);
 
 	match cli.command {
-		Commands::NodeStatus {} => {
-			match client.get_node_status(GetNodeStatusRequest {}).await {
+		Commands::NodeStatus => {
+			match client.get_node_status(&GetNodeStatusRequest {}).await {
 				Ok(response) => {
 					println!("Node status: {:?}", response);
 				},
@@ -67,6 +69,16 @@ async fn main() {
 					eprintln!("Error getting list of channels: {:?}", e);
 				},
 			};
+		},
+		Commands::PaymentsHistory => {
+			match client.get_payments_history(&PaymentsHistoryRequest {}).await {
+				Ok(response) => {
+					println!("Payments history: {:?}", response);
+				},
+				Err(e) => {
+					eprintln!("Error getting payments history: {:?}", e);
+				},
+			}
 		},
 	}
 }

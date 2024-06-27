@@ -1,5 +1,5 @@
 use ldk_node::lightning::chain::BestBlock;
-use ldk_node::payment::{PaymentDirection, PaymentKind, PaymentStatus};
+use ldk_node::payment::{PaymentDetails, PaymentDirection, PaymentKind, PaymentStatus};
 use ldk_node::LightningBalance::{
 	ClaimableAwaitingConfirmations, ClaimableOnChannelClose, ContentiousClaimable,
 	CounterpartyRevokedOutputClaimable, MaybePreimageClaimableHTLC, MaybeTimeoutClaimableHTLC,
@@ -67,91 +67,9 @@ impl NodeService {
 	fn handle_get_payment_history_request(
 		&self, _: Req,
 	) -> <NodeService as Service<Request<Incoming>>>::Future {
-		fn to_proto(kind: &PaymentKind) -> protos::PaymentKind {
-			match kind {
-				ldk_node::payment::PaymentKind::Onchain => protos::PaymentKind {
-					kind: Some(protos::payment_kind::Kind::Onchain(protos::Onchain {})),
-				},
-				ldk_node::payment::PaymentKind::Bolt11 { hash, preimage, secret } => {
-					protos::PaymentKind {
-						kind: Some(protos::payment_kind::Kind::Bolt11(protos::Bolt11 {
-							hash: hash.to_string(),
-							preimage: preimage.map(|it| it.to_string()),
-							secret: secret.map(|it| it.0.to_vec()),
-						})),
-					}
-				},
-				ldk_node::payment::PaymentKind::Bolt11Jit {
-					hash,
-					preimage,
-					secret,
-					lsp_fee_limits,
-				} => protos::PaymentKind {
-					kind: Some(protos::payment_kind::Kind::Bolt11Jit(protos::Bolt11Jit {
-						hash: hash.to_string(),
-						preimage: preimage.map(|it| it.to_string()),
-						secret: secret.map(|it| it.0.to_vec()),
-						lsp_fee_limits: Some(protos::LspFeeLimits {
-							max_total_opening_fee_msat: lsp_fee_limits.max_total_opening_fee_msat,
-							max_proportional_opening_fee_ppm_msat: lsp_fee_limits
-								.max_proportional_opening_fee_ppm_msat,
-						}),
-					})),
-				},
-				ldk_node::payment::PaymentKind::Bolt12Offer {
-					hash,
-					preimage,
-					secret,
-					offer_id,
-				} => protos::PaymentKind {
-					kind: Some(protos::payment_kind::Kind::Bolt12offer(protos::Bolt12Offer {
-						hash: hash.map(|it| it.to_string()),
-						preimage: preimage.map(|it| it.to_string()),
-						secret: secret.map(|it| it.0.to_vec()),
-						offer_id: offer_id.0.to_vec(),
-					})),
-				},
-				ldk_node::payment::PaymentKind::Bolt12Refund { hash, preimage, secret } => {
-					protos::PaymentKind {
-						kind: Some(protos::payment_kind::Kind::Bolt12refund(
-							protos::Bolt12Refund {
-								hash: hash.map(|it| it.to_string()),
-								preimage: preimage.map(|it| it.to_string()),
-								secret: secret.map(|it| it.0.to_vec()),
-							},
-						)),
-					}
-				},
-				ldk_node::payment::PaymentKind::Spontaneous { hash, preimage } => {
-					protos::PaymentKind {
-						kind: Some(protos::payment_kind::Kind::Spontaneous(protos::Spontaneous {
-							hash: hash.to_string(),
-							preimage: preimage.map(|it| it.to_string()),
-						})),
-					}
-				},
-			}
-		}
 		let payments = self.node.list_payments();
 		let msg = protos::PaymentsHistoryResponse {
-			payments: payments
-				.iter()
-				.map(|payment| protos::PaymentDetails {
-					id: Some(protos::PaymentId { data: payment.id.0.to_vec() }),
-					kind: Some(to_proto(&payment.kind)),
-					amount_msat: payment.amount_msat,
-					direction: match payment.direction {
-						PaymentDirection::Inbound => protos::PaymentDirection::Inbound.into(),
-						PaymentDirection::Outbound => protos::PaymentDirection::Outbound.into(),
-					},
-					status: match payment.status {
-						PaymentStatus::Pending => protos::PaymentStatus::Pending.into(),
-						PaymentStatus::Succeeded => protos::PaymentStatus::Succeeded.into(),
-						PaymentStatus::Failed => protos::PaymentStatus::Failed.into(),
-					},
-					latest_update_timestamp: payment.latest_update_timestamp,
-				})
-				.collect(),
+			payments: payments.iter().map(to_payment_details_proto).collect(),
 		};
 		make_response(msg.encode_to_vec())
 	}
@@ -401,4 +319,76 @@ impl Service<Req> for NodeService {
 
 fn make_response(bytes: Vec<u8>) -> <NodeService as Service<Request<Incoming>>>::Future {
 	Box::pin(async { Ok(Response::builder().body(Full::new(bytes.into())).unwrap()) })
+}
+
+fn to_payment_kind_proto(kind: &PaymentKind) -> protos::PaymentKind {
+	match kind {
+		ldk_node::payment::PaymentKind::Onchain => protos::PaymentKind {
+			kind: Some(protos::payment_kind::Kind::Onchain(protos::Onchain {})),
+		},
+		ldk_node::payment::PaymentKind::Bolt11 { hash, preimage, secret } => protos::PaymentKind {
+			kind: Some(protos::payment_kind::Kind::Bolt11(protos::Bolt11 {
+				hash: hash.to_string(),
+				preimage: preimage.map(|it| it.to_string()),
+				secret: secret.map(|it| it.0.to_vec()),
+			})),
+		},
+		ldk_node::payment::PaymentKind::Bolt11Jit { hash, preimage, secret, lsp_fee_limits } => {
+			protos::PaymentKind {
+				kind: Some(protos::payment_kind::Kind::Bolt11Jit(protos::Bolt11Jit {
+					hash: hash.to_string(),
+					preimage: preimage.map(|it| it.to_string()),
+					secret: secret.map(|it| it.0.to_vec()),
+					lsp_fee_limits: Some(protos::LspFeeLimits {
+						max_total_opening_fee_msat: lsp_fee_limits.max_total_opening_fee_msat,
+						max_proportional_opening_fee_ppm_msat: lsp_fee_limits
+							.max_proportional_opening_fee_ppm_msat,
+					}),
+				})),
+			}
+		},
+		ldk_node::payment::PaymentKind::Bolt12Offer { hash, preimage, secret, offer_id } => {
+			protos::PaymentKind {
+				kind: Some(protos::payment_kind::Kind::Bolt12offer(protos::Bolt12Offer {
+					hash: hash.map(|it| it.to_string()),
+					preimage: preimage.map(|it| it.to_string()),
+					secret: secret.map(|it| it.0.to_vec()),
+					offer_id: offer_id.0.to_vec(),
+				})),
+			}
+		},
+		ldk_node::payment::PaymentKind::Bolt12Refund { hash, preimage, secret } => {
+			protos::PaymentKind {
+				kind: Some(protos::payment_kind::Kind::Bolt12refund(protos::Bolt12Refund {
+					hash: hash.map(|it| it.to_string()),
+					preimage: preimage.map(|it| it.to_string()),
+					secret: secret.map(|it| it.0.to_vec()),
+				})),
+			}
+		},
+		ldk_node::payment::PaymentKind::Spontaneous { hash, preimage } => protos::PaymentKind {
+			kind: Some(protos::payment_kind::Kind::Spontaneous(protos::Spontaneous {
+				hash: hash.to_string(),
+				preimage: preimage.map(|it| it.to_string()),
+			})),
+		},
+	}
+}
+
+fn to_payment_details_proto(payment: &PaymentDetails) -> protos::PaymentDetails {
+	protos::PaymentDetails {
+		id: Some(protos::PaymentId { data: payment.id.0.to_vec() }),
+		kind: Some(to_payment_kind_proto(&payment.kind)),
+		amount_msat: payment.amount_msat,
+		direction: match payment.direction {
+			PaymentDirection::Inbound => protos::PaymentDirection::Inbound.into(),
+			PaymentDirection::Outbound => protos::PaymentDirection::Outbound.into(),
+		},
+		status: match payment.status {
+			PaymentStatus::Pending => protos::PaymentStatus::Pending.into(),
+			PaymentStatus::Succeeded => protos::PaymentStatus::Succeeded.into(),
+			PaymentStatus::Failed => protos::PaymentStatus::Failed.into(),
+		},
+		latest_update_timestamp: payment.latest_update_timestamp,
+	}
 }

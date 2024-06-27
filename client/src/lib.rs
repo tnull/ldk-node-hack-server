@@ -5,7 +5,7 @@ use prost::Message;
 
 use protos::{
 	GetBalancesRequest, GetBalancesResponse, GetNodeStatusRequest, GetNodeStatusResponse,
-	GetPaymentDetailsRequest, GetPaymentDetailsResponse, ListChannelsRequest,
+	GetPaymentDetailsRequest, GetPaymentDetailsResponse, ListChannelsRequest, ListChannelsResponse,
 	OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse,
 	PaymentsHistoryRequest, PaymentsHistoryResponse,
 };
@@ -55,7 +55,7 @@ impl ServerHackClient {
 
 	pub async fn list_channels(
 		&self, request: ListChannelsRequest,
-	) -> Result<ListChannelsRequest, ServerHackError> {
+	) -> Result<ListChannelsResponse, ServerHackError> {
 		let url = format!("http://{}/listChannels", self.base_url);
 		self.post_request(&request, &url).await
 	}

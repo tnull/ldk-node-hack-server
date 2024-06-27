@@ -46,44 +46,57 @@ impl NodeService {
 	pub(crate) fn new(node: Arc<Node>) -> Self {
 		Self { node }
 	}
+}
 
-	fn handle_get_node_status_request(
-		&self, _: Req,
-	) -> <NodeService as Service<Request<Incoming>>>::Future {
-		let status = self.node.status();
-		let BestBlock { block_hash, height } = status.current_best_block;
+impl Service<Req> for NodeService {
+	type Response = Response<Full<Bytes>>;
+	type Error = hyper::Error;
+	type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-		let msg = GetNodeStatusResponse {
-			public_key: self.node.node_id().to_string(),
-			current_best_block: Some(protos::BestBlock {
-				block_hash: block_hash.to_string(),
-				height,
-			}),
-			latest_wallet_sync_timestamp: status.latest_wallet_sync_timestamp,
-			latest_onchain_wallet_sync_timestamp: status.latest_onchain_wallet_sync_timestamp,
-			latest_fee_rate_cache_update_timestamp: status.latest_fee_rate_cache_update_timestamp,
-			latest_rgs_snapshot_timestamp: status.latest_rgs_snapshot_timestamp,
-			latest_node_announcement_broadcast_timestamp: status
-				.latest_node_announcement_broadcast_timestamp,
-		};
-		make_response(msg.encode_to_vec())
-	}
-
-	fn handle_get_payment_history_request(
-		&self, _: Req,
-	) -> <NodeService as Service<Request<Incoming>>>::Future {
-		let payments = self.node.list_payments();
-		let msg = protos::PaymentsHistoryResponse {
-			payments: payments.iter().map(to_payment_details_proto).collect(),
-		};
-		make_response(msg.encode_to_vec())
-	}
-
-	fn default_response(&self) -> <NodeService as Service<Request<Incoming>>>::Future {
-		make_response(b"UNKNOWN REQUEST".to_vec())
+	fn call(&self, req: Req) -> Self::Future {
+		println!("processing request: {} {}", req.method(), req.uri().path());
+		let node = Arc::clone(&self.node);
+		match req.uri().path() {
+			GET_NODE_STATUS_PATH => Box::pin(handle_get_node_status_request(node, req)),
+			GET_NODE_BALANCES_PATH => Box::pin(handle_get_balances_request(node, req)),
+			ONCHAIN_RECEIVE => Box::pin(handle_onchain_receive(node, req)),
+			ONCHAIN_SEND => Box::pin(handle_onchain_send(node, req)),
+			LIST_CHANNELS_PATH => Box::pin(handle_list_channels_request(node, req)),
+			PAYMENTS_HISTORY_PATH => Box::pin(handle_get_payment_history_request(node, req)),
+			GET_PAYMENT_DETAILS_PATH => Box::pin(handle_get_payment_details_request(node, req)),
+			_ => Box::pin(async { Ok(make_response(b"UNKNOWN REQUEST".to_vec())) }),
+		}
 	}
 }
 
+async fn handle_get_node_status_request(
+	node: Arc<Node>, _: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	let status = node.status();
+	let BestBlock { block_hash, height } = status.current_best_block;
+
+	let msg = GetNodeStatusResponse {
+		public_key: node.node_id().to_string(),
+		current_best_block: Some(protos::BestBlock { block_hash: block_hash.to_string(), height }),
+		latest_wallet_sync_timestamp: status.latest_wallet_sync_timestamp,
+		latest_onchain_wallet_sync_timestamp: status.latest_onchain_wallet_sync_timestamp,
+		latest_fee_rate_cache_update_timestamp: status.latest_fee_rate_cache_update_timestamp,
+		latest_rgs_snapshot_timestamp: status.latest_rgs_snapshot_timestamp,
+		latest_node_announcement_broadcast_timestamp: status
+			.latest_node_announcement_broadcast_timestamp,
+	};
+	Ok(make_response(msg.encode_to_vec()))
+}
+
+async fn handle_get_payment_history_request(
+	node: Arc<Node>, _: Req,
+) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+	let payments = node.list_payments();
+	let msg = protos::PaymentsHistoryResponse {
+		payments: payments.iter().map(to_payment_details_proto).collect(),
+	};
+	Ok(make_response(msg.encode_to_vec()))
+}
 async fn handle_onchain_receive(
 	node: Arc<Node>, request: Req,
 ) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
@@ -93,7 +106,7 @@ async fn handle_onchain_receive(
 	let response = OnchainReceiveResponse {
 		address: node.onchain_payment().new_address().unwrap().to_string(),
 	};
-	Ok(Response::builder().body(Full::new(Bytes::from(response.encode_to_vec()))).unwrap())
+	Ok(make_response(response.encode_to_vec()))
 }
 
 async fn handle_onchain_send(
@@ -112,7 +125,7 @@ async fn handle_onchain_send(
 		None => node.onchain_payment().send_all_to_address(&address).unwrap(),
 	};
 	let response = OnchainSendResponse { txid: txid.to_string() };
-	Ok(Response::builder().body(Full::new(Bytes::from(response.encode_to_vec()))).unwrap())
+	Ok(make_response(response.encode_to_vec()))
 }
 
 async fn handle_get_balances_request(
@@ -277,7 +290,7 @@ async fn handle_get_balances_request(
 		lightning_balances,
 		pending_balances_from_channel_closures,
 	};
-	Ok(Response::builder().body(Full::new(Bytes::from(msg.encode_to_vec()))).unwrap())
+	Ok(make_response(msg.encode_to_vec()))
 }
 
 async fn handle_list_channels_request(
@@ -317,7 +330,7 @@ async fn handle_list_channels_request(
 
 	let response = ListChannelsResponse { channels };
 
-	Ok(Response::builder().body(Full::new(Bytes::from(response.encode_to_vec()))).unwrap())
+	Ok(make_response(response.encode_to_vec()))
 }
 
 async fn handle_get_payment_details_request(
@@ -348,31 +361,8 @@ async fn handle_get_payment_details_request(
 		.unwrap())
 }
 
-impl Service<Req> for NodeService {
-	type Response = Response<Full<Bytes>>;
-	type Error = hyper::Error;
-	type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
-
-	fn call(&self, req: Req) -> Self::Future {
-		println!("processing request: {} {}", req.method(), req.uri().path());
-		let node = Arc::clone(&self.node);
-		match req.uri().path() {
-			GET_NODE_STATUS_PATH => self.handle_get_node_status_request(req),
-			GET_NODE_BALANCES_PATH => {
-				Box::pin(async { handle_get_balances_request(node, req).await })
-			},
-			ONCHAIN_RECEIVE => Box::pin(handle_onchain_receive(node, req)),
-			ONCHAIN_SEND => Box::pin(async { handle_onchain_send(node, req).await }),
-			LIST_CHANNELS_PATH => Box::pin(async { handle_list_channels_request(node, req).await }),
-			PAYMENTS_HISTORY_PATH => self.handle_get_payment_history_request(req),
-			GET_PAYMENT_DETAILS_PATH => Box::pin(handle_get_payment_details_request(node, req)),
-			_ => self.default_response(),
-		}
-	}
-}
-
-fn make_response(bytes: Vec<u8>) -> <NodeService as Service<Request<Incoming>>>::Future {
-	Box::pin(async { Ok(Response::builder().body(Full::new(bytes.into())).unwrap()) })
+fn make_response(response: Vec<u8>) -> Response<Full<Bytes>> {
+	Response::builder().body(Full::new(Bytes::from(response.encode_to_vec()))).unwrap()
 }
 
 fn to_payment_kind_proto(kind: &PaymentKind) -> protos::PaymentKind {

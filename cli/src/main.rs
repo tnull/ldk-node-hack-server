@@ -1,6 +1,8 @@
 use clap::{Parser, Subcommand};
 use client::ServerHackClient;
-use protos::{GetBalancesRequest, GetNodeStatusRequest, OnchainReceiveRequest};
+use protos::{
+	GetBalancesRequest, GetNodeStatusRequest, ListChannelsRequest, OnchainReceiveRequest,
+};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -14,9 +16,10 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-	NodeStatus,
-	NewAddress,
-	NodeBalances,
+	NodeStatus {},
+	NodeBalances {},
+	NewAddress {},
+	ListChannels {},
 }
 
 #[tokio::main]
@@ -35,7 +38,7 @@ async fn main() {
 				},
 			};
 		},
-		Commands::NewAddress => {
+		Commands::NewAddress {} => {
 			match client.get_new_funding_address(OnchainReceiveRequest {}).await {
 				Ok(address) => {
 					println!("New address: {:?}", address);
@@ -45,13 +48,23 @@ async fn main() {
 				},
 			}
 		},
-		Commands::NodeBalances => {
+		Commands::NodeBalances {} => {
 			match client.get_node_balances(GetBalancesRequest {}).await {
 				Ok(response) => {
 					println!("Node balances: {:?}", response);
 				},
 				Err(e) => {
 					eprintln!("Error getting node balances: {:?}", e);
+				},
+			};
+		},
+		Commands::ListChannels {} => {
+			match client.list_channels(ListChannelsRequest {}).await {
+				Ok(response) => {
+					println!("Channels: {:?}", response);
+				},
+				Err(e) => {
+					eprintln!("Error getting list of channels: {:?}", e);
 				},
 			};
 		},

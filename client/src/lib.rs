@@ -100,19 +100,19 @@ impl ServerHackClient {
 			},
 		};
 		let status = response_raw.status();
-		let payload = response_raw.bytes().await?;
+		let payload = response_raw.text().await?;
 
 		if status.is_success() {
-			Rs::decode(&payload[..]).map_err(|_| {
+			Rs::decode(&payload.encode_to_vec()[..]).map_err(|_| {
 				ServerHackError::FailedRequest(
 					reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-					String::from_utf8(payload.to_vec()).unwrap(),
+                    payload,
 				)
 			})
 		} else {
 			Err(ServerHackError::FailedRequest(
 				status,
-				String::from_utf8(payload.to_vec()).unwrap(),
+                    payload,
 			))
 		}
 	}

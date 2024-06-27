@@ -1,11 +1,11 @@
 use clap::{Parser, Subcommand};
 use client::ServerHackClient;
-use protos::GetNodeStatusRequest;
+use protos::{GetNodeStatusRequest, OnchainReceiveRequest};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Cli {
-	#[arg(short, long)]
+	#[arg(short, long, default_value = "localhost:3000")]
 	base_url: String,
 
 	#[command(subcommand)]
@@ -15,6 +15,7 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
 	NodeStatus {},
+	NewAddress {},
 }
 
 #[tokio::main]
@@ -30,6 +31,16 @@ async fn main() {
 				},
 				Err(e) => {
 					eprintln!("Error getting node status: {:?}", e);
+				},
+			};
+		},
+		Commands::NewAddress {} => {
+			match client.get_new_funding_address(OnchainReceiveRequest {}).await {
+				Ok(address) => {
+					println!("New address: {:?}", address);
+				},
+				Err(e) => {
+					eprintln!("Error getting new funding address: {:?}", e);
 				},
 			};
 		},

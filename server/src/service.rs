@@ -26,9 +26,11 @@ use std::sync::Arc;
 use protos::{
 	lightning_balance, pending_sweep_balance, Bolt11ReceiveRequest, Bolt11ReceiveResponse, Channel,
 	CloseChannelRequest, CloseChannelResponse, ForceCloseChannelRequest, ForceCloseChannelResponse,
-	GetNodeIdRequest, GetNodeIdResponse, GetNodeStatusResponse, GetPaymentDetailsRequest,
-	ListChannelsRequest, ListChannelsResponse, OnchainReceiveRequest, OnchainReceiveResponse,
-	OnchainSendRequest, OnchainSendResponse, OpenChannelRequest, OpenChannelResponse, Outpoint,
+	GetBalancesRequest, GetBalancesResponse, GetNodeIdRequest, GetNodeIdResponse,
+	GetNodeStatusRequest, GetNodeStatusResponse, GetPaymentDetailsRequest, ListChannelsRequest,
+	ListChannelsResponse, OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest,
+	OnchainSendResponse, OpenChannelRequest, OpenChannelResponse, Outpoint, PaymentsHistoryRequest,
+	PaymentsHistoryResponse,
 };
 
 const GET_NODE_ID_PATH: &str = "/getNodeId";
@@ -66,41 +68,81 @@ impl Service<Req> for NodeService {
 		println!("processing request: {} {}", req.method(), req.uri().path());
 		let node = Arc::clone(&self.node);
 		match req.uri().path() {
-			GET_NODE_ID_PATH => Box::pin(handle_get_node_id_request(node, req)),
-			GET_NODE_STATUS_PATH => Box::pin(handle_get_node_status_request(node, req)),
-			GET_NODE_BALANCES_PATH => Box::pin(handle_get_balances_request(node, req)),
-			ONCHAIN_RECEIVE => Box::pin(handle_onchain_receive(node, req)),
-			ONCHAIN_SEND => Box::pin(handle_onchain_send(node, req)),
-			BOLT11_RECEIVE => Box::pin(handle_bolt11_receive_request(node, req)),
-			LIST_CHANNELS_PATH => Box::pin(handle_list_channels_request(node, req)),
-			OPEN_CHANNEL_PATH => Box::pin(handle_open_channel(node, req)),
-			CLOSE_CHANNEL_PATH => Box::pin(handle_close_channel(node, req)),
-			FORCE_CLOSE_CHANNEL_PATH => Box::pin(handle_force_close_channel(node, req)),
-			PAYMENTS_HISTORY_PATH => Box::pin(handle_get_payment_history_request(node, req)),
-			GET_PAYMENT_DETAILS_PATH => Box::pin(handle_get_payment_details_request(node, req)),
-			_ => Box::pin(async { Ok(make_response(b"UNKNOWN REQUEST".to_vec())) }),
+			GET_NODE_ID_PATH => Box::pin(handle_request(node, req, handle_get_node_id_request)),
+			GET_NODE_STATUS_PATH => {
+				Box::pin(handle_request(node, req, handle_get_node_status_request))
+			},
+			GET_NODE_BALANCES_PATH => {
+				Box::pin(handle_request(node, req, handle_get_balances_request))
+			},
+			ONCHAIN_RECEIVE => Box::pin(handle_request(node, req, handle_onchain_receive)),
+			ONCHAIN_SEND => Box::pin(handle_request(node, req, handle_onchain_send)),
+			BOLT11_RECEIVE => Box::pin(handle_request(node, req, handle_bolt11_receive_request)),
+			LIST_CHANNELS_PATH => Box::pin(handle_request(node, req, handle_list_channels_request)),
+			OPEN_CHANNEL_PATH => Box::pin(handle_request(node, req, handle_open_channel)),
+			CLOSE_CHANNEL_PATH => Box::pin(handle_request(node, req, handle_close_channel)),
+			FORCE_CLOSE_CHANNEL_PATH => {
+				Box::pin(handle_request(node, req, handle_force_close_channel))
+			},
+			PAYMENTS_HISTORY_PATH => {
+				Box::pin(handle_request(node, req, handle_get_payment_history_request))
+			},
+			GET_PAYMENT_DETAILS_PATH => {
+				Box::pin(handle_request(node, req, handle_get_payment_details_request))
+			},
+			path => {
+				let error = format!("Unknown request: {}", path).into_bytes();
+				Box::pin(async {
+					Ok(Response::builder()
+						.status(StatusCode::BAD_REQUEST)
+						.body(Full::new(Bytes::from(error)))
+						.unwrap())
+				})
+			},
 		}
 	}
 }
 
-async fn handle_get_node_id_request(
-	node: Arc<Node>, request: Req,
+async fn handle_request<
+	T: Message + Default,
+	R: Message,
+	F: Fn(Arc<Node>, T) -> Result<R, ldk_node::NodeError>,
+>(
+	node: Arc<Node>, request: Req, handler: F,
 ) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
-	let bytes = request.into_body().collect().await.unwrap().to_bytes();
-	let _request = GetNodeIdRequest::decode(bytes).unwrap();
-
-	let node_id = node.node_id();
-	let msg = GetNodeIdResponse { node_id: node_id.to_string() };
-	Ok(make_response(msg.encode_to_vec()))
+	let bytes = request.into_body().collect().await?.to_bytes();
+	match T::decode(bytes) {
+		Ok(request) => match handler(node, request) {
+			Ok(response) => Ok(Response::builder()
+				.body(Full::new(Bytes::from(response.encode_to_vec())))
+				.unwrap()),
+			Err(e) => Ok(Response::builder()
+				.status(StatusCode::INTERNAL_SERVER_ERROR)
+				.body(Full::new(Bytes::from(e.to_string().into_bytes())))
+				.unwrap()),
+		},
+		Err(_) => Ok(Response::builder()
+			.status(StatusCode::BAD_REQUEST)
+			.body(Full::new(Bytes::from(b"Error parsing request".to_vec())))
+			.unwrap()),
+	}
 }
 
-async fn handle_get_node_status_request(
-	node: Arc<Node>, _: Req,
-) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+fn handle_get_node_id_request(
+	node: Arc<Node>, _request: GetNodeIdRequest,
+) -> Result<GetNodeIdResponse, ldk_node::NodeError> {
+	let node_id = node.node_id();
+	let response = GetNodeIdResponse { node_id: node_id.to_string() };
+	Ok(response)
+}
+
+fn handle_get_node_status_request(
+	node: Arc<Node>, _request: GetNodeStatusRequest,
+) -> Result<GetNodeStatusResponse, ldk_node::NodeError> {
 	let status = node.status();
 	let BestBlock { block_hash, height } = status.current_best_block;
 
-	let msg = GetNodeStatusResponse {
+	let response = GetNodeStatusResponse {
 		public_key: node.node_id().to_string(),
 		current_best_block: Some(protos::BestBlock { block_hash: block_hash.to_string(), height }),
 		latest_wallet_sync_timestamp: status.latest_wallet_sync_timestamp,
@@ -110,52 +152,45 @@ async fn handle_get_node_status_request(
 		latest_node_announcement_broadcast_timestamp: status
 			.latest_node_announcement_broadcast_timestamp,
 	};
-	Ok(make_response(msg.encode_to_vec()))
+	Ok(response)
 }
 
-async fn handle_get_payment_history_request(
-	node: Arc<Node>, _: Req,
-) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+fn handle_get_payment_history_request(
+	node: Arc<Node>, _request: PaymentsHistoryRequest,
+) -> Result<PaymentsHistoryResponse, ldk_node::NodeError> {
 	let payments = node.list_payments();
-	let msg = protos::PaymentsHistoryResponse {
+	let response = protos::PaymentsHistoryResponse {
 		payments: payments.iter().map(to_payment_details_proto).collect(),
 	};
-	Ok(make_response(msg.encode_to_vec()))
-}
-async fn handle_onchain_receive(
-	node: Arc<Node>, request: Req,
-) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
-	// FIXME: Limit how much we read and add error checks
-	let bytes = request.into_body().collect().await.unwrap().to_bytes();
-	let _request = OnchainReceiveRequest::decode(bytes).unwrap();
-	let response = OnchainReceiveResponse {
-		address: node.onchain_payment().new_address().unwrap().to_string(),
-	};
-	Ok(make_response(response.encode_to_vec()))
+	Ok(response)
 }
 
-async fn handle_onchain_send(
-	node: Arc<Node>, request: Req,
-) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
-	// FIXME: Limit how much we read and add error checks
-	let bytes = request.into_body().collect().await.unwrap().to_bytes();
-	let request = OnchainSendRequest::decode(bytes).unwrap();
+fn handle_onchain_receive(
+	node: Arc<Node>, _request: OnchainReceiveRequest,
+) -> Result<OnchainReceiveResponse, ldk_node::NodeError> {
+	let response =
+		OnchainReceiveResponse { address: node.onchain_payment().new_address()?.to_string() };
+	Ok(response)
+}
 
+fn handle_onchain_send(
+	node: Arc<Node>, request: OnchainSendRequest,
+) -> Result<OnchainSendResponse, ldk_node::NodeError> {
 	let address = Address::from_str(&request.address)
-		.unwrap()
+		.map_err(|_| ldk_node::NodeError::InvalidAddress)?
 		.require_network(node.config().network)
-		.unwrap();
+		.map_err(|_| ldk_node::NodeError::InvalidAddress)?;
 	let txid = match request.amount_sats {
-		Some(amount_sats) => node.onchain_payment().send_to_address(&address, amount_sats).unwrap(),
-		None => node.onchain_payment().send_all_to_address(&address).unwrap(),
+		Some(amount_sats) => node.onchain_payment().send_to_address(&address, amount_sats)?,
+		None => node.onchain_payment().send_all_to_address(&address)?,
 	};
 	let response = OnchainSendResponse { txid: txid.to_string() };
-	Ok(make_response(response.encode_to_vec()))
+	Ok(response)
 }
 
-async fn handle_get_balances_request(
-	node: Arc<Node>, _: Req,
-) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
+fn handle_get_balances_request(
+	node: Arc<Node>, _request: GetBalancesRequest,
+) -> Result<GetBalancesResponse, ldk_node::NodeError> {
 	let balance_details = node.list_balances();
 	let lightning_balances = balance_details
 		.lightning_balances
@@ -307,7 +342,7 @@ async fn handle_get_balances_request(
 			},
 		})
 		.collect();
-	let msg = protos::GetBalancesResponse {
+	let response = GetBalancesResponse {
 		total_onchain_balance_sats: balance_details.total_onchain_balance_sats,
 		spendable_onchain_balance_sats: balance_details.spendable_onchain_balance_sats,
 		total_anchor_channels_reserve_sats: balance_details.total_anchor_channels_reserve_sats,
@@ -315,29 +350,28 @@ async fn handle_get_balances_request(
 		lightning_balances,
 		pending_balances_from_channel_closures,
 	};
-	Ok(make_response(msg.encode_to_vec()))
+	Ok(response)
 }
 
-async fn handle_bolt11_receive_request(
-	node: Arc<Node>, request: Req,
-) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
-	let bytes = request.into_body().collect().await.unwrap().to_bytes();
-	let request = Bolt11ReceiveRequest::decode(bytes).unwrap();
-	let invoice = node
-		.bolt11_payment()
-		.receive(request.amount_msat.unwrap(), &request.description, request.expiry_secs)
-		.unwrap();
+fn handle_bolt11_receive_request(
+	node: Arc<Node>, request: Bolt11ReceiveRequest,
+) -> Result<Bolt11ReceiveResponse, ldk_node::NodeError> {
+	let invoice = match request.amount_msat {
+		Some(amount_msat) => {
+			node.bolt11_payment().receive(amount_msat, &request.description, request.expiry_secs)?
+		},
+		None => node
+			.bolt11_payment()
+			.receive_variable_amount(&request.description, request.expiry_secs)?,
+	};
 
 	let response = Bolt11ReceiveResponse { invoice: invoice.to_string() };
-
-	Ok(make_response(response.encode_to_vec()))
+	Ok(response)
 }
 
-async fn handle_list_channels_request(
-	node: Arc<Node>, request: Req,
-) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
-	let bytes = request.into_body().collect().await.unwrap().to_bytes();
-	let _request = ListChannelsRequest::decode(bytes).unwrap();
+fn handle_list_channels_request(
+	node: Arc<Node>, _request: ListChannelsRequest,
+) -> Result<ListChannelsResponse, ldk_node::NodeError> {
 	let channels = node
 		.list_channels()
 		.iter()
@@ -369,89 +403,72 @@ async fn handle_list_channels_request(
 		.collect();
 
 	let response = ListChannelsResponse { channels };
-
-	Ok(make_response(response.encode_to_vec()))
+	Ok(response)
 }
 
-async fn handle_get_payment_details_request(
-	node: Arc<Node>, request: Req,
-) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
-	let bytes = request.into_body().collect().await.unwrap().to_bytes();
-	let get_payment_details_request = GetPaymentDetailsRequest::decode(bytes).unwrap();
-
-	let payment_id = get_payment_details_request.payment_id.as_bytes();
+fn handle_get_payment_details_request(
+	node: Arc<Node>, request: GetPaymentDetailsRequest,
+) -> Result<protos::PaymentDetails, ldk_node::NodeError> {
+	let payment_id = request.payment_id.as_bytes();
 	if payment_id.len() != 32 {
-		return Ok(Response::builder()
-			.status(StatusCode::BAD_REQUEST)
-			.body(Full::new(Bytes::from(b"Payment ID len not 32 bytes".to_vec())))
-			.unwrap());
+		return Err(ldk_node::NodeError::InvalidPaymentId);
 	}
 
 	let mut arr = [0u8; 32];
 	arr.copy_from_slice(&payment_id[..]);
 	let payment_id = ldk_node::lightning::ln::channelmanager::PaymentId(arr);
 	if let Some(payment_details) = node.payment(&payment_id) {
-		let msg = to_payment_details_proto(&payment_details);
-		return Ok(Response::builder().body(Full::new(Bytes::from(msg.encode_to_vec()))).unwrap());
+		let response = to_payment_details_proto(&payment_details);
+		return Ok(response);
 	}
 
-	Ok(Response::builder()
-		.status(StatusCode::NOT_FOUND)
-		.body(Full::new(Bytes::from(b"Payment not found".to_vec())))
-		.unwrap())
+	return Err(ldk_node::NodeError::InvalidPaymentId);
 }
 
-async fn handle_open_channel(
-	node: Arc<Node>, request: Req,
-) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
-	let bytes = request.into_body().collect().await.unwrap().to_bytes();
-	let request = OpenChannelRequest::decode(bytes).unwrap();
-	let node_id = PublicKey::from_str(&request.node_id).unwrap();
-	let address = SocketAddress::from_str(&request.address).unwrap();
-	let user_channel_id = node
-		.connect_open_channel(
-			node_id,
-			address,
-			request.channel_amount_sats,
-			request.push_to_counterparty_msat,
-			None,
-			request.announce_channel,
-		)
-		.unwrap();
-	let msg = OpenChannelResponse { user_channel_id: user_channel_id.0.to_be_bytes().to_vec() };
-	Ok(make_response(msg.encode_to_vec()))
+fn handle_open_channel(
+	node: Arc<Node>, request: OpenChannelRequest,
+) -> Result<OpenChannelResponse, ldk_node::NodeError> {
+	let node_id =
+		PublicKey::from_str(&request.node_id).map_err(|_| ldk_node::NodeError::InvalidNodeId)?;
+	let address = SocketAddress::from_str(&request.address)
+		.map_err(|_| ldk_node::NodeError::InvalidSocketAddress)?;
+	let user_channel_id = node.connect_open_channel(
+		node_id,
+		address,
+		request.channel_amount_sats,
+		request.push_to_counterparty_msat,
+		None,
+		request.announce_channel,
+	)?;
+	let response =
+		OpenChannelResponse { user_channel_id: user_channel_id.0.to_be_bytes().to_vec() };
+	Ok(response)
 }
 
-async fn handle_close_channel(
-	node: Arc<Node>, request: Req,
-) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
-	let bytes = request.into_body().collect().await.unwrap().to_bytes();
-	let request = CloseChannelRequest::decode(bytes).unwrap();
+fn handle_close_channel(
+	node: Arc<Node>, request: CloseChannelRequest,
+) -> Result<CloseChannelResponse, ldk_node::NodeError> {
 	let mut be_bytes = [0u8; 16];
 	be_bytes.copy_from_slice(&request.user_channel_id);
 	let user_channel_id = UserChannelId(u128::from_be_bytes(be_bytes));
-	let counterparty_node_id = PublicKey::from_str(&request.counterparty_node_id).unwrap();
-	node.close_channel(&user_channel_id, counterparty_node_id).unwrap();
-	let msg = CloseChannelResponse {};
-	Ok(make_response(msg.encode_to_vec()))
+	let counterparty_node_id = PublicKey::from_str(&request.counterparty_node_id)
+		.map_err(|_| ldk_node::NodeError::InvalidNodeId)?;
+	node.close_channel(&user_channel_id, counterparty_node_id)?;
+	let response = CloseChannelResponse {};
+	Ok(response)
 }
 
-async fn handle_force_close_channel(
-	node: Arc<Node>, request: Req,
-) -> Result<<NodeService as Service<Request<Incoming>>>::Response, hyper::Error> {
-	let bytes = request.into_body().collect().await.unwrap().to_bytes();
-	let request = ForceCloseChannelRequest::decode(bytes).unwrap();
+fn handle_force_close_channel(
+	node: Arc<Node>, request: ForceCloseChannelRequest,
+) -> Result<ForceCloseChannelResponse, ldk_node::NodeError> {
 	let mut be_bytes = [0u8; 16];
 	be_bytes.copy_from_slice(&request.user_channel_id);
 	let user_channel_id = UserChannelId(u128::from_be_bytes(be_bytes));
-	let counterparty_node_id = PublicKey::from_str(&request.counterparty_node_id).unwrap();
-	node.force_close_channel(&user_channel_id, counterparty_node_id).unwrap();
-	let msg = ForceCloseChannelResponse {};
-	Ok(make_response(msg.encode_to_vec()))
-}
-
-fn make_response(response: Vec<u8>) -> Response<Full<Bytes>> {
-	Response::builder().body(Full::new(Bytes::from(response.encode_to_vec()))).unwrap()
+	let counterparty_node_id = PublicKey::from_str(&request.counterparty_node_id)
+		.map_err(|_| ldk_node::NodeError::InvalidNodeId)?;
+	node.force_close_channel(&user_channel_id, counterparty_node_id)?;
+	let response = ForceCloseChannelResponse {};
+	Ok(response)
 }
 
 fn to_payment_kind_proto(kind: &PaymentKind) -> protos::PaymentKind {

@@ -359,3 +359,72 @@ message GetBalancesResponse {
     // might not already be accounted for in total_onchain_balance_sats.
     repeated PendingSweepBalance pending_balances_from_channel_closures = 6;
 }
+
+message PaymentDetails {
+  PaymentId id = 1;
+  PaymentKind kind = 2;
+  optional uint64 amount_msat = 3;
+  PaymentDirection direction = 4;
+  PaymentStatus status = 5;
+  uint64 latest_update_timestamp = 6;
+}
+
+message PaymentKind {
+  oneof kind {
+      Onchain onchain = 1;
+      Bolt11 bolt11 = 2;
+      Bolt11Jit bolt11jit = 3;
+      Bolt12Offer bolt12offer = 4;
+      Bolt12Refund bolt12refund = 5;
+      Spontaneous spontaneous = 6;
+  }
+}
+
+message Onchain {}
+
+message Bolt11 {
+  string hash = 1;
+  optional string preimage = 2;
+  optional bytes secret = 3;
+}
+
+message Bolt11Jit {
+  string hash = 1;
+  optional string preimage = 2;
+  optional bytes secret = 3;
+  LSPFeeLimits lsp_fee_limits = 4;
+}
+
+message Bolt12Offer {
+  string hash = 1;
+  optional string preimage = 2;
+  optional bytes secret = 3;
+  string offer_id = 4;
+}
+
+message Bolt12Refund {
+  string hash = 1;
+  optional string preimage = 2;
+  optional bytes secret = 3;
+}
+
+message Spontaneous {
+  string hash = 1;
+  optional string preimage = 2;
+}
+
+message LSPFeeLimits {
+  optional uint64 max_total_opening_fee_msat = 1;
+  optional uint64 max_proportional_opening_fee_ppm_msat = 2;
+}
+
+enum PaymentDirection {
+  INBOUND = 0;
+  OUTBOUND = 1;
+}
+
+enum PaymentStatus {
+  PENDING = 0;
+  SUCCEEDED = 1;
+  FAILED = 2;
+}

@@ -358,8 +358,8 @@ pub mod lightning_balance {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct PendingBroadcast {
-	#[prost(string, optional, tag = "1")]
-	pub channel_id: ::core::option::Option<::prost::alloc::string::String>,
+	#[prost(string, tag = "1")]
+	pub channel_id: ::prost::alloc::string::String,
 	#[prost(uint64, tag = "2")]
 	pub amount_satoshis: u64,
 }
@@ -447,4 +447,163 @@ pub struct GetBalancesResponse {
 	/// might not already be accounted for in total_onchain_balance_sats.
 	#[prost(message, repeated, tag = "6")]
 	pub pending_balances_from_channel_closures: ::prost::alloc::vec::Vec<PendingSweepBalance>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PaymentDetails {
+	#[prost(message, optional, tag = "1")]
+	pub id: ::core::option::Option<PaymentId>,
+	#[prost(message, optional, tag = "2")]
+	pub kind: ::core::option::Option<PaymentKind>,
+	#[prost(uint64, optional, tag = "3")]
+	pub amount_msat: ::core::option::Option<u64>,
+	#[prost(enumeration = "PaymentDirection", tag = "4")]
+	pub direction: i32,
+	#[prost(enumeration = "PaymentStatus", tag = "5")]
+	pub status: i32,
+	#[prost(uint64, tag = "6")]
+	pub latest_update_timestamp: u64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PaymentKind {
+	#[prost(oneof = "payment_kind::Kind", tags = "1, 2, 3, 4, 5, 6")]
+	pub kind: ::core::option::Option<payment_kind::Kind>,
+}
+/// Nested message and enum types in `PaymentKind`.
+pub mod payment_kind {
+	#[allow(clippy::derive_partial_eq_without_eq)]
+	#[derive(Clone, PartialEq, ::prost::Oneof)]
+	pub enum Kind {
+		#[prost(message, tag = "1")]
+		Onchain(super::Onchain),
+		#[prost(message, tag = "2")]
+		Bolt11(super::Bolt11),
+		#[prost(message, tag = "3")]
+		Bolt11jit(super::Bolt11Jit),
+		#[prost(message, tag = "4")]
+		Bolt12offer(super::Bolt12Offer),
+		#[prost(message, tag = "5")]
+		Bolt12refund(super::Bolt12Refund),
+		#[prost(message, tag = "6")]
+		Spontaneous(super::Spontaneous),
+	}
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Onchain {}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Bolt11 {
+	#[prost(string, tag = "1")]
+	pub hash: ::prost::alloc::string::String,
+	#[prost(string, optional, tag = "2")]
+	pub preimage: ::core::option::Option<::prost::alloc::string::String>,
+	#[prost(bytes = "vec", optional, tag = "3")]
+	pub secret: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Bolt11Jit {
+	#[prost(string, tag = "1")]
+	pub hash: ::prost::alloc::string::String,
+	#[prost(string, optional, tag = "2")]
+	pub preimage: ::core::option::Option<::prost::alloc::string::String>,
+	#[prost(bytes = "vec", optional, tag = "3")]
+	pub secret: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+	#[prost(message, optional, tag = "4")]
+	pub lsp_fee_limits: ::core::option::Option<LspFeeLimits>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Bolt12Offer {
+	#[prost(string, tag = "1")]
+	pub hash: ::prost::alloc::string::String,
+	#[prost(string, optional, tag = "2")]
+	pub preimage: ::core::option::Option<::prost::alloc::string::String>,
+	#[prost(bytes = "vec", optional, tag = "3")]
+	pub secret: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+	#[prost(string, tag = "4")]
+	pub offer_id: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Bolt12Refund {
+	#[prost(string, tag = "1")]
+	pub hash: ::prost::alloc::string::String,
+	#[prost(string, optional, tag = "2")]
+	pub preimage: ::core::option::Option<::prost::alloc::string::String>,
+	#[prost(bytes = "vec", optional, tag = "3")]
+	pub secret: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Spontaneous {
+	#[prost(string, tag = "1")]
+	pub hash: ::prost::alloc::string::String,
+	#[prost(string, optional, tag = "2")]
+	pub preimage: ::core::option::Option<::prost::alloc::string::String>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LspFeeLimits {
+	#[prost(uint64, optional, tag = "1")]
+	pub max_total_opening_fee_msat: ::core::option::Option<u64>,
+	#[prost(uint64, optional, tag = "2")]
+	pub max_proportional_opening_fee_ppm_msat: ::core::option::Option<u64>,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum PaymentDirection {
+	Inbound = 0,
+	Outbound = 1,
+}
+impl PaymentDirection {
+	/// String value of the enum field names used in the ProtoBuf definition.
+	///
+	/// The values are not transformed in any way and thus are considered stable
+	/// (if the ProtoBuf definition does not change) and safe for programmatic use.
+	pub fn as_str_name(&self) -> &'static str {
+		match self {
+			PaymentDirection::Inbound => "INBOUND",
+			PaymentDirection::Outbound => "OUTBOUND",
+		}
+	}
+	/// Creates an enum from field names used in the ProtoBuf definition.
+	pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+		match value {
+			"INBOUND" => Some(Self::Inbound),
+			"OUTBOUND" => Some(Self::Outbound),
+			_ => None,
+		}
+	}
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum PaymentStatus {
+	Pending = 0,
+	Succeeded = 1,
+	Failed = 2,
+}
+impl PaymentStatus {
+	/// String value of the enum field names used in the ProtoBuf definition.
+	///
+	/// The values are not transformed in any way and thus are considered stable
+	/// (if the ProtoBuf definition does not change) and safe for programmatic use.
+	pub fn as_str_name(&self) -> &'static str {
+		match self {
+			PaymentStatus::Pending => "PENDING",
+			PaymentStatus::Succeeded => "SUCCEEDED",
+			PaymentStatus::Failed => "FAILED",
+		}
+	}
+	/// Creates an enum from field names used in the ProtoBuf definition.
+	pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+		match value {
+			"PENDING" => Some(Self::Pending),
+			"SUCCEEDED" => Some(Self::Succeeded),
+			"FAILED" => Some(Self::Failed),
+			_ => None,
+		}
+	}
 }

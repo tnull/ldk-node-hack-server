@@ -121,7 +121,48 @@ message ListChannelsRequest {
 }
 
 message ListChannelsResponse {
+
   repeated Channel channels = 1;
+}
+
+message OpenChannelRequest {
+
+  string node_id = 1;
+
+  string address = 2;
+
+  uint64 channel_amount_sats = 3;
+
+  optional uint64 push_to_counterparty_msat = 4;
+
+  bool announce_channel = 5;
+}
+
+message OpenChannelResponse {
+
+  bytes user_channel_id = 1;
+}
+
+message CloseChannelRequest {
+
+  bytes user_channel_id = 1;
+
+  string counterparty_node_id = 2;
+}
+
+message CloseChannelResponse{
+
+}
+
+message ForceCloseChannelRequest {
+
+  bytes user_channel_id = 1;
+
+  string counterparty_node_id = 2;
+}
+
+message ForceCloseChannelResponse {
+
 }
 
 message Channel {

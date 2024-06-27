@@ -135,6 +135,48 @@ pub struct ListChannelsResponse {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OpenChannelRequest {
+	#[prost(string, tag = "1")]
+	pub node_id: ::prost::alloc::string::String,
+	#[prost(string, tag = "2")]
+	pub address: ::prost::alloc::string::String,
+	#[prost(uint64, tag = "3")]
+	pub channel_amount_sats: u64,
+	#[prost(uint64, optional, tag = "4")]
+	pub push_to_counterparty_msat: ::core::option::Option<u64>,
+	#[prost(bool, tag = "5")]
+	pub announce_channel: bool,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OpenChannelResponse {
+	#[prost(bytes = "vec", tag = "1")]
+	pub user_channel_id: ::prost::alloc::vec::Vec<u8>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CloseChannelRequest {
+	#[prost(bytes = "vec", tag = "1")]
+	pub user_channel_id: ::prost::alloc::vec::Vec<u8>,
+	#[prost(string, tag = "2")]
+	pub counterparty_node_id: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CloseChannelResponse {}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ForceCloseChannelRequest {
+	#[prost(bytes = "vec", tag = "1")]
+	pub user_channel_id: ::prost::alloc::vec::Vec<u8>,
+	#[prost(string, tag = "2")]
+	pub counterparty_node_id: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ForceCloseChannelResponse {}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Channel {
 	/// The channel ID (prior to funding transaction generation, this is a random 32-byte
 	/// identifier, afterwards this is the transaction ID of the funding transaction XOR the

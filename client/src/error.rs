@@ -2,7 +2,7 @@ use prost::DecodeError;
 
 #[derive(Debug)]
 pub enum ServerHackError {
-	FailedRequest(reqwest::StatusCode, Vec<u8>),
+	FailedRequest(reqwest::StatusCode, String),
 	InternalError(String),
 }
 

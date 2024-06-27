@@ -3,11 +3,7 @@ mod error;
 use crate::error::ServerHackError;
 use prost::Message;
 
-use protos::{
-	GetBalancesRequest, GetBalancesResponse, GetNodeStatusRequest, GetNodeStatusResponse,
-	ListChannelsRequest, OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest,
-	OnchainSendResponse, PaymentsHistoryRequest, PaymentsHistoryResponse,
-};
+use protos::{GetBalancesRequest, GetBalancesResponse, GetNodeStatusRequest, GetNodeStatusResponse, GetPaymentDetailsRequest, GetPaymentDetailsResponse, ListChannelsRequest, OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, PaymentsHistoryRequest, PaymentsHistoryResponse};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
 
@@ -34,7 +30,7 @@ impl ServerHackClient {
 	pub async fn get_new_funding_address(
 		&self, request: OnchainReceiveRequest,
 	) -> Result<OnchainReceiveResponse, ServerHackError> {
-		let url = format!("http://{}//onchain/receive", self.base_url);
+		let url = format!("http://{}/onchain/receive", self.base_url);
 		self.post_request(&request, &url).await
 	}
 
@@ -64,6 +60,13 @@ impl ServerHackClient {
 	) -> Result<PaymentsHistoryResponse, ServerHackError> {
 		let url = format!("http://{}/listPaymentsHistory", self.base_url);
 		self.post_request(request, &url).await
+	}
+
+	pub async fn get_payment_details(
+		&self, request: GetPaymentDetailsRequest,
+	) -> Result<GetPaymentDetailsResponse, ServerHackError> {
+		let url = format!("http://{}/getPaymentDetails", self.base_url);
+		self.post_request(&request, &url).await
 	}
 
 	async fn post_request<Rq: Message, Rs: Message + Default>(

@@ -64,7 +64,7 @@ impl ServerHackClient {
 	pub async fn list_channels(
 		&self, request: ListChannelsRequest,
 	) -> Result<ListChannelsResponse, ServerHackError> {
-		let url = format!("http://{}/listChannels", self.base_url);
+		let url = format!("http://{}/channel/list", self.base_url);
 		self.post_request(&request, &url).await
 	}
 

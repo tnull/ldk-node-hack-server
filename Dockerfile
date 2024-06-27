@@ -5,7 +5,7 @@ FROM rust:latest
 WORKDIR /usr/src/ldk-node-hack-server
 
 # Copy the Rust project files to the working directory
-COPY src/ src/
+COPY server/ server/
 COPY Cargo.toml .
 COPY docker-config.json .
 

@@ -54,7 +54,7 @@ impl ServerHackClient {
 	pub async fn get_payments_history(
 		&self, request: &PaymentsHistoryRequest,
 	) -> Result<PaymentsHistoryResponse, ServerHackError> {
-		let url = format!("http://{}/getPaymentsHistory", self.base_url);
+		let url = format!("http://{}/listPaymentsHistory", self.base_url);
 		self.post_request(request, &url).await
 	}
 

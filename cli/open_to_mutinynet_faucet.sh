@@ -1,0 +1,1 @@
+cargo run open-channel --node-id 02465ed5be53d04fde66c9418ff14a5f2267723810176c9212b722e542dc1afb1b --address 45.79.52.207:9735 --channel-amount-sats 1000000 --push-to-counterparty-msat 5000000 --announce-channel

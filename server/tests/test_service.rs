@@ -3,6 +3,7 @@
 /// Run with `cargo test --test test_service -- --ignored`
 mod docker_compose;
 
+use core::panic;
 use std::{collections::HashMap, ptr::addr_of, sync::Once};
 
 use client::ServerHackClient;
@@ -16,33 +17,20 @@ use protos::{
 const SERVER_URL: &str = "localhost:3000";
 const COMPOSE_FILE_PATH: &str = "../docker-compose.yml";
 
-const GET_NODE_ID_PATH: &str = "getNodeId";
-const GET_NODE_STATUS_PATH: &str = "getNodeStatus";
-const ONCHAIN_RECEIVE: &str = "onchain/receive";
-const ONCHAIN_SEND: &str = "onchain/send";
-const BOLT11_RECEIVE: &str = "bolt11/receive";
-const GET_NODE_BALANCES_PATH: &str = "getNodeBalances";
-const PAYMENTS_HISTORY_PATH: &str = "listPaymentsHistory";
-const GET_PAYMENT_DETAILS_PATH: &str = "getPaymentDetails";
-const LIST_CHANNELS_PATH: &str = "channel/list";
-const OPEN_CHANNEL_PATH: &str = "channel/open";
-const CLOSE_CHANNEL_PATH: &str = "channel/close";
-const FORCE_CLOSE_CHANNEL_PATH: &str = "channel/force-close";
-
 fn start_docker_compose() -> DockerCompose {
-	let (docker_compose, _) = DockerCompose::up_with_output(DockerComposeConfig {
+	match DockerCompose::up_with_output(DockerComposeConfig {
 		compose_file: COMPOSE_FILE_PATH.into(),
 		env: HashMap::new(),
 		project_name: "integration-tests".to_string(),
-	})
-	.inspect(|(_, output)| {
-		println!("docker-compose output: {output:?}");
-	})
-	.inspect_err(|e| {
-		eprintln!("Error starting docker-compose: {e:?}");
-	})
-	.unwrap();
-	docker_compose
+	}) {
+		Ok((docker_compose, output)) => {
+			println!("docker-compose output: {output:?}");
+			docker_compose
+		},
+		Err(e) => {
+			panic!("Error starting docker-compose: {e:?}");
+		},
+	}
 }
 
 #[tokio::test]

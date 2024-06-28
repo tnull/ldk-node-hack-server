@@ -1,10 +1,10 @@
 use clap::{Parser, Subcommand};
 use client::ServerHackClient;
 use protos::{
-	Bolt11ReceiveRequest, Bolt11SendRequest, Bolt12ReceiveRequest, CloseChannelRequest, ForceCloseChannelRequest,
-	GetBalancesRequest, GetNodeIdRequest, GetNodeStatusRequest, GetPaymentDetailsRequest,
-	ListChannelsRequest, OnchainReceiveRequest, OnchainSendRequest, OpenChannelRequest,
-	PaymentsHistoryRequest,
+	Bolt11ReceiveRequest, Bolt11SendRequest, Bolt12ReceiveRequest, Bolt12SendRequest,
+	CloseChannelRequest, ForceCloseChannelRequest, GetBalancesRequest, GetNodeIdRequest,
+	GetNodeStatusRequest, GetPaymentDetailsRequest, ListChannelsRequest, OnchainReceiveRequest,
+	OnchainSendRequest, OpenChannelRequest, PaymentsHistoryRequest,
 };
 
 #[derive(Parser, Debug)]
@@ -38,6 +38,11 @@ enum Commands {
 	Bolt12Receive {
 		description: String,
 		amount_msat: Option<u64>,
+	},
+	Bolt12Send {
+		offer: String,
+		amount_msat: Option<u64>,
+		payer_note: Option<String>,
 	},
 	NodeBalances,
 	PaymentsHistory,
@@ -182,15 +187,22 @@ async fn main() {
 			};
 		},
 		Commands::Bolt12Receive { description, amount_msat } => {
-			match client
-				.bolt12_receive(Bolt12ReceiveRequest { description, amount_msat })
-				.await
-			{
+			match client.bolt12_receive(Bolt12ReceiveRequest { description, amount_msat }).await {
 				Ok(response) => {
 					println!("New offer: {:?}", response);
 				},
 				Err(e) => {
 					eprintln!("Error getting offer: {:?}", e);
+				},
+			};
+		},
+		Commands::Bolt12Send { offer, amount_msat, payer_note } => {
+			match client.bolt12_send(Bolt12SendRequest { offer, amount_msat, payer_note }).await {
+				Ok(response) => {
+					println!("Sent BOLT12 payment: {:?}", response);
+				},
+				Err(e) => {
+					eprintln!("Error sending BOLT12 payment: {:?}", e);
 				},
 			};
 		},

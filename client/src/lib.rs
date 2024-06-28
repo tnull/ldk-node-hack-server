@@ -5,12 +5,13 @@ use prost::Message;
 
 use protos::{
 	Bolt11ReceiveRequest, Bolt11ReceiveResponse, Bolt11SendRequest, Bolt11SendResponse,
-	Bolt12ReceiveRequest, Bolt12ReceiveResponse, CloseChannelRequest, CloseChannelResponse,
-	ForceCloseChannelRequest, ForceCloseChannelResponse, GetBalancesRequest, GetBalancesResponse,
-	GetNodeIdRequest, GetNodeIdResponse, GetNodeStatusRequest, GetNodeStatusResponse,
-	GetPaymentDetailsRequest, GetPaymentDetailsResponse, ListChannelsRequest, ListChannelsResponse,
-	OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse,
-	OpenChannelRequest, OpenChannelResponse, PaymentsHistoryRequest, PaymentsHistoryResponse,
+	Bolt12ReceiveRequest, Bolt12ReceiveResponse, Bolt12SendRequest, Bolt12SendResponse,
+	CloseChannelRequest, CloseChannelResponse, ForceCloseChannelRequest, ForceCloseChannelResponse,
+	GetBalancesRequest, GetBalancesResponse, GetNodeIdRequest, GetNodeIdResponse,
+	GetNodeStatusRequest, GetNodeStatusResponse, GetPaymentDetailsRequest,
+	GetPaymentDetailsResponse, ListChannelsRequest, ListChannelsResponse, OnchainReceiveRequest,
+	OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, OpenChannelRequest,
+	OpenChannelResponse, PaymentsHistoryRequest, PaymentsHistoryResponse,
 };
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
@@ -24,6 +25,7 @@ const ONCHAIN_SEND_PATH: &str = "onchain/send";
 const BOLT11_RECEIVE_PATH: &str = "bolt11/receive";
 const BOLT11_SEND_PATH: &str = "bolt11/send";
 const BOLT12_RECEIVE_PATH: &str = "bolt12/receive";
+const BOLT12_SEND_PATH: &str = "bolt12/send";
 const GET_NODE_BALANCES_PATH: &str = "getNodeBalances";
 const PAYMENTS_HISTORY_PATH: &str = "listPaymentsHistory";
 const GET_PAYMENT_DETAILS_PATH: &str = "getPaymentDetails";
@@ -89,6 +91,13 @@ impl ServerHackClient {
 		&self, request: Bolt12ReceiveRequest,
 	) -> Result<Bolt12ReceiveResponse, ServerHackError> {
 		let url = format!("http://{}/{BOLT12_RECEIVE_PATH}", self.base_url);
+		self.post_request(&request, &url).await
+	}
+
+	pub async fn bolt12_send(
+		&self, request: Bolt12SendRequest,
+	) -> Result<Bolt12SendResponse, ServerHackError> {
+		let url = format!("http://{}/{BOLT12_SEND_PATH}", self.base_url);
 		self.post_request(&request, &url).await
 	}
 

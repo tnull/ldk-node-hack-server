@@ -1,0 +1,8 @@
+{
+    "esplora_server_url": "https://mutinynet.com/api/",
+    "listening_addr": "0.0.0.0:9735",
+    "log_level": "trace",
+    "network": "signet",
+    "rest_service_addr": "0.0.0.0:3000",
+    "storage_dir_path": "./ldk-node-lsp-mutinynet"
+}

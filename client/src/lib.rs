@@ -4,16 +4,30 @@ use crate::error::ServerHackError;
 use prost::Message;
 
 use protos::{
-	Bolt11ReceiveRequest, Bolt11ReceiveResponse, GetBalancesRequest, GetBalancesResponse,
-	GetNodeStatusRequest, GetNodeStatusResponse, GetPaymentDetailsRequest,
-	GetPaymentDetailsResponse, ListChannelsRequest, ListChannelsResponse, OnchainReceiveRequest,
-	OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, PaymentsHistoryRequest,
-	PaymentsHistoryResponse,
+	Bolt11ReceiveRequest, Bolt11ReceiveResponse, CloseChannelRequest, CloseChannelResponse,
+	ForceCloseChannelRequest, ForceCloseChannelResponse, GetBalancesRequest, GetBalancesResponse,
+	GetNodeIdRequest, GetNodeIdResponse, GetNodeStatusRequest, GetNodeStatusResponse,
+	GetPaymentDetailsRequest, GetPaymentDetailsResponse, ListChannelsRequest, ListChannelsResponse,
+	OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse,
+	OpenChannelRequest, OpenChannelResponse, PaymentsHistoryRequest, PaymentsHistoryResponse,
 };
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
 
 const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
+
+const GET_NODE_ID_PATH: &str = "getNodeId";
+const GET_NODE_STATUS_PATH: &str = "getNodeStatus";
+const ONCHAIN_RECEIVE: &str = "onchain/receive";
+const ONCHAIN_SEND: &str = "onchain/send";
+const BOLT11_RECEIVE: &str = "bolt11/receive";
+const GET_NODE_BALANCES_PATH: &str = "getNodeBalances";
+const PAYMENTS_HISTORY_PATH: &str = "listPaymentsHistory";
+const GET_PAYMENT_DETAILS_PATH: &str = "getPaymentDetails";
+const LIST_CHANNELS_PATH: &str = "channel/list";
+const OPEN_CHANNEL_PATH: &str = "channel/open";
+const CLOSE_CHANNEL_PATH: &str = "channel/close";
+const FORCE_CLOSE_CHANNEL_PATH: &str = "channel/force-close";
 
 #[derive(Clone)]
 pub struct ServerHackClient {
@@ -26,59 +40,87 @@ impl ServerHackClient {
 		Self { base_url, client: Client::new() }
 	}
 
+	pub async fn get_node_id(
+		&self, request: GetNodeIdRequest,
+	) -> Result<GetNodeIdResponse, ServerHackError> {
+		let url = format!("http://{}/{GET_NODE_ID_PATH}", self.base_url);
+		self.post_request(&request, &url).await
+	}
+
 	pub async fn get_node_status(
-		&self, request: &GetNodeStatusRequest,
+		&self, request: GetNodeStatusRequest,
 	) -> Result<GetNodeStatusResponse, ServerHackError> {
-		let url = format!("http://{}/getNodeStatus", self.base_url);
-		self.post_request(request, &url).await
+		let url = format!("http://{}/{GET_NODE_STATUS_PATH}", self.base_url);
+		self.post_request(&request, &url).await
 	}
 
 	pub async fn get_new_funding_address(
 		&self, request: OnchainReceiveRequest,
 	) -> Result<OnchainReceiveResponse, ServerHackError> {
-		let url = format!("http://{}/onchain/receive", self.base_url);
+		let url = format!("http://{}/{ONCHAIN_RECEIVE}", self.base_url);
 		self.post_request(&request, &url).await
 	}
 
 	pub async fn send_onchain(
 		&self, request: OnchainSendRequest,
 	) -> Result<OnchainSendResponse, ServerHackError> {
-		let url = format!("http://{}/onchain/send", self.base_url);
+		let url = format!("http://{}/{ONCHAIN_SEND}", self.base_url);
 		self.post_request(&request, &url).await
 	}
 
 	pub async fn bolt11_receive(
 		&self, request: Bolt11ReceiveRequest,
 	) -> Result<Bolt11ReceiveResponse, ServerHackError> {
-		let url = format!("http://{}/bolt11/receive", self.base_url);
+		let url = format!("http://{}/{BOLT11_RECEIVE}", self.base_url);
 		self.post_request(&request, &url).await
 	}
 
 	pub async fn get_node_balances(
 		&self, request: GetBalancesRequest,
 	) -> Result<GetBalancesResponse, ServerHackError> {
-		let url = format!("http://{}/getNodeBalances", self.base_url);
+		let url = format!("http://{}/{GET_NODE_BALANCES_PATH}", self.base_url);
 		self.post_request(&request, &url).await
 	}
 
 	pub async fn list_channels(
 		&self, request: ListChannelsRequest,
 	) -> Result<ListChannelsResponse, ServerHackError> {
-		let url = format!("http://{}/channel/list", self.base_url);
+		let url = format!("http://{}/{LIST_CHANNELS_PATH}", self.base_url);
 		self.post_request(&request, &url).await
 	}
 
 	pub async fn get_payments_history(
 		&self, request: &PaymentsHistoryRequest,
 	) -> Result<PaymentsHistoryResponse, ServerHackError> {
-		let url = format!("http://{}/listPaymentsHistory", self.base_url);
+		let url = format!("http://{}/{PAYMENTS_HISTORY_PATH}", self.base_url);
 		self.post_request(request, &url).await
 	}
 
 	pub async fn get_payment_details(
 		&self, request: GetPaymentDetailsRequest,
 	) -> Result<GetPaymentDetailsResponse, ServerHackError> {
-		let url = format!("http://{}/getPaymentDetails", self.base_url);
+		let url = format!("http://{}/{GET_PAYMENT_DETAILS_PATH}", self.base_url);
+		self.post_request(&request, &url).await
+	}
+
+	pub async fn open_channel(
+		&self, request: OpenChannelRequest,
+	) -> Result<OpenChannelResponse, ServerHackError> {
+		let url = format!("http://{}/{OPEN_CHANNEL_PATH}", self.base_url);
+		self.post_request(&request, &url).await
+	}
+
+	pub async fn close_channel(
+		&self, request: CloseChannelRequest,
+	) -> Result<CloseChannelResponse, ServerHackError> {
+		let url = format!("http://{}/{CLOSE_CHANNEL_PATH}", self.base_url);
+		self.post_request(&request, &url).await
+	}
+
+	pub async fn force_close_channel(
+		&self, request: ForceCloseChannelRequest,
+	) -> Result<ForceCloseChannelResponse, ServerHackError> {
+		let url = format!("http://{}/{FORCE_CLOSE_CHANNEL_PATH}", self.base_url);
 		self.post_request(&request, &url).await
 	}
 

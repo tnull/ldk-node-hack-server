@@ -9,6 +9,7 @@ cargo run -- --base-url localhost:3000 new-address
 cargo run -- --base-url localhost:3000 send-onchain addy 1000
 cargo run -- --base-url localhost:3000 bolt11-receive "description" 1000 1000
 cargo run -- --base-url localhost:3000 bolt11-send invoice 1000
+cargo run -- --base-url localhost:3000 bolt12-receive "description" 1000
 cargo run -- --base-url localhost:3000 node-balances
 cargo run -- --base-url localhost:3000 payments-history
 cargo run -- --base-url localhost:3000 payment-details -p 12345678901234567890123456789012

@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use client::ServerHackClient;
 use protos::{
-	Bolt11ReceiveRequest, Bolt11SendRequest, CloseChannelRequest, ForceCloseChannelRequest,
+	Bolt11ReceiveRequest, Bolt11SendRequest, Bolt12ReceiveRequest, CloseChannelRequest, ForceCloseChannelRequest,
 	GetBalancesRequest, GetNodeIdRequest, GetNodeStatusRequest, GetPaymentDetailsRequest,
 	ListChannelsRequest, OnchainReceiveRequest, OnchainSendRequest, OpenChannelRequest,
 	PaymentsHistoryRequest,
@@ -33,6 +33,10 @@ enum Commands {
 	},
 	Bolt11Send {
 		invoice: String,
+		amount_msat: Option<u64>,
+	},
+	Bolt12Receive {
+		description: String,
 		amount_msat: Option<u64>,
 	},
 	NodeBalances,
@@ -174,6 +178,19 @@ async fn main() {
 				},
 				Err(e) => {
 					eprintln!("Error sending BOLT11 payment: {:?}", e);
+				},
+			};
+		},
+		Commands::Bolt12Receive { description, amount_msat } => {
+			match client
+				.bolt12_receive(Bolt12ReceiveRequest { description, amount_msat })
+				.await
+			{
+				Ok(response) => {
+					println!("New offer: {:?}", response);
+				},
+				Err(e) => {
+					eprintln!("Error getting offer: {:?}", e);
 				},
 			};
 		},

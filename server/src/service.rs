@@ -26,12 +26,13 @@ use std::sync::Arc;
 
 use protos::{
 	lightning_balance, pending_sweep_balance, Bolt11ReceiveRequest, Bolt11ReceiveResponse,
-	Bolt11SendRequest, Bolt11SendResponse, Channel, CloseChannelRequest, CloseChannelResponse,
-	ForceCloseChannelRequest, ForceCloseChannelResponse, GetBalancesRequest, GetBalancesResponse,
-	GetNodeIdRequest, GetNodeIdResponse, GetNodeStatusRequest, GetNodeStatusResponse,
-	GetPaymentDetailsRequest, ListChannelsRequest, ListChannelsResponse, OnchainReceiveRequest,
-	OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, OpenChannelRequest,
-	OpenChannelResponse, Outpoint, PaymentsHistoryRequest, PaymentsHistoryResponse,
+	Bolt11SendRequest, Bolt11SendResponse, Bolt12ReceiveRequest, Bolt12ReceiveResponse, Channel,
+	CloseChannelRequest, CloseChannelResponse, ForceCloseChannelRequest, ForceCloseChannelResponse,
+	GetBalancesRequest, GetBalancesResponse, GetNodeIdRequest, GetNodeIdResponse,
+	GetNodeStatusRequest, GetNodeStatusResponse, GetPaymentDetailsRequest, ListChannelsRequest,
+	ListChannelsResponse, OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest,
+	OnchainSendResponse, OpenChannelRequest, OpenChannelResponse, Outpoint, PaymentsHistoryRequest,
+	PaymentsHistoryResponse,
 };
 
 const GET_NODE_ID_PATH: &str = "/getNodeId";
@@ -40,6 +41,7 @@ const ONCHAIN_RECEIVE_PATH: &str = "/onchain/receive";
 const ONCHAIN_SEND_PATH: &str = "/onchain/send";
 const BOLT11_RECEIVE_PATH: &str = "/bolt11/receive";
 const BOLT11_SEND_PATH: &str = "/bolt11/send";
+const BOLT12_RECEIVE_PATH: &str = "/bolt12/receive";
 const GET_NODE_BALANCES_PATH: &str = "/getNodeBalances";
 const PAYMENTS_HISTORY_PATH: &str = "/listPaymentsHistory";
 const GET_PAYMENT_DETAILS_PATH: &str = "/getPaymentDetails";
@@ -83,6 +85,9 @@ impl Service<Req> for NodeService {
 				Box::pin(handle_request(node, req, handle_bolt11_receive_request))
 			},
 			BOLT11_SEND_PATH => Box::pin(handle_request(node, req, handle_bolt11_send_request)),
+			BOLT12_RECEIVE_PATH => {
+				Box::pin(handle_request(node, req, handle_bolt12_receive_request))
+			},
 			LIST_CHANNELS_PATH => Box::pin(handle_request(node, req, handle_list_channels_request)),
 			OPEN_CHANNEL_PATH => Box::pin(handle_request(node, req, handle_open_channel)),
 			CLOSE_CHANNEL_PATH => Box::pin(handle_request(node, req, handle_close_channel)),
@@ -386,6 +391,18 @@ fn handle_bolt11_send_request(
 
 	let response =
 		Bolt11SendResponse { payment_id: Some(protos::PaymentId { data: payment_id.0.to_vec() }) };
+	Ok(response)
+}
+
+fn handle_bolt12_receive_request(
+	node: Arc<Node>, request: Bolt12ReceiveRequest,
+) -> Result<Bolt12ReceiveResponse, ldk_node::NodeError> {
+	let offer = match request.amount_msat {
+		Some(amount_msat) => node.bolt12_payment().receive(amount_msat, &request.description)?,
+		None => node.bolt12_payment().receive_variable_amount(&request.description)?,
+	};
+
+	let response = Bolt12ReceiveResponse { offer: offer.to_string() };
 	Ok(response)
 }
 

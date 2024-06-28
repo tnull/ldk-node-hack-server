@@ -130,7 +130,7 @@ async fn main() {
 			};
 		},
 		Commands::PaymentsHistory => {
-			match client.get_payments_history(&PaymentsHistoryRequest {}).await {
+			match client.get_payments_history(PaymentsHistoryRequest {}).await {
 				Ok(response) => {
 					println!("Payments history: {:?}", response);
 				},

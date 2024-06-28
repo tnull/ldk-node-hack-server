@@ -155,10 +155,10 @@ async fn main() {
 				.await
 			{
 				Ok(response) => {
-					println!("Payment details: {:?}", response);
+					println!("New invoice: {:?}", response);
 				},
 				Err(e) => {
-					eprintln!("Error getting payment details: {:?}", e);
+					eprintln!("Error getting invoice: {:?}", e);
 				},
 			};
 		},

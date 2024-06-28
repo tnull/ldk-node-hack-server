@@ -1,8 +1,9 @@
 use clap::{Parser, Subcommand};
 use client::ServerHackClient;
 use protos::{
-	Bolt11ReceiveRequest, GetBalancesRequest, GetNodeStatusRequest, GetPaymentDetailsRequest,
-	ListChannelsRequest, OnchainReceiveRequest, OnchainSendRequest, PaymentsHistoryRequest,
+	Bolt11ReceiveRequest, CloseChannelRequest, ForceCloseChannelRequest, GetBalancesRequest,
+	GetNodeIdRequest, GetNodeStatusRequest, GetPaymentDetailsRequest, ListChannelsRequest,
+	OnchainReceiveRequest, OnchainSendRequest, OpenChannelRequest, PaymentsHistoryRequest,
 };
 
 #[derive(Parser, Debug)]
@@ -17,6 +18,7 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+	NodeId,
 	NodeStatus,
 	NewAddress,
 	SendOnchain {
@@ -29,11 +31,35 @@ enum Commands {
 		amount_msat: Option<u64>,
 	},
 	NodeBalances,
-	ListChannels,
 	PaymentsHistory,
 	PaymentDetails {
 		#[arg(short, long)]
 		payment_id: String,
+	},
+	ListChannels,
+	OpenChannel {
+		#[arg(short, long)]
+		node_id: String,
+		#[arg(short, long)]
+		address: String,
+		#[arg(short, long)]
+		channel_amount_sats: u64,
+		#[arg(short, long)]
+		push_to_counterparty_msat: Option<u64>,
+		#[arg(long)]
+		announce_channel: bool,
+	},
+	CloseChannel {
+		#[arg(short, long)]
+		user_channel_id: String,
+		#[arg(short, long)]
+		counterparty_node_id: String,
+	},
+	ForceCloseChannel {
+		#[arg(short, long)]
+		user_channel_id: String,
+		#[arg(short, long)]
+		counterparty_node_id: String,
 	},
 }
 
@@ -43,8 +69,18 @@ async fn main() {
 	let client = ServerHackClient::new(cli.base_url);
 
 	match cli.command {
+		Commands::NodeId => {
+			match client.get_node_id(GetNodeIdRequest {}).await {
+				Ok(response) => {
+					println!("Node ID: {:?}", response);
+				},
+				Err(e) => {
+					eprintln!("Error getting node ID: {:?}", e);
+				},
+			};
+		},
 		Commands::NodeStatus => {
-			match client.get_node_status(&GetNodeStatusRequest {}).await {
+			match client.get_node_status(GetNodeStatusRequest {}).await {
 				Ok(response) => {
 					println!("Node status: {:?}", response);
 				},
@@ -123,6 +159,63 @@ async fn main() {
 				},
 				Err(e) => {
 					eprintln!("Error getting payment details: {:?}", e);
+				},
+			};
+		},
+		Commands::OpenChannel {
+			node_id,
+			address,
+			channel_amount_sats,
+			push_to_counterparty_msat,
+			announce_channel,
+		} => {
+			match client
+				.open_channel(OpenChannelRequest {
+					node_id,
+					address,
+					channel_amount_sats,
+					push_to_counterparty_msat,
+					announce_channel,
+				})
+				.await
+			{
+				Ok(response) => {
+					println!("Open channel response: {:?}", response);
+				},
+				Err(e) => {
+					eprintln!("Error opening channel: {:?}", e);
+				},
+			};
+		},
+		Commands::CloseChannel { user_channel_id, counterparty_node_id } => {
+			match client
+				.close_channel(CloseChannelRequest {
+					user_channel_id: user_channel_id.into_bytes(),
+					counterparty_node_id,
+				})
+				.await
+			{
+				Ok(response) => {
+					println!("Close channel response: {:?}", response);
+				},
+				Err(e) => {
+					eprintln!("Error closing channel: {:?}", e);
+				},
+			};
+		},
+		Commands::ForceCloseChannel { user_channel_id, counterparty_node_id } => {
+			match client
+				.force_close_channel(ForceCloseChannelRequest {
+					user_channel_id: user_channel_id.into_bytes(),
+					counterparty_node_id,
+				})
+				.await
+			{
+				Ok(response) => {
+					println!("Force close channel response: {:?}", response);
+				},
+				Err(e) => {
+					eprintln!("Error force closing channel: {:?}", e);
 				},
 			};
 		},

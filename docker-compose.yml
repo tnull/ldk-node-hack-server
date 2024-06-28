@@ -78,6 +78,21 @@ services:
       - "9735:9735"
     networks:
       - bitcoin-electrs
+    healthcheck:
+      test: [ "CMD", "curl", "http://localhost:3000/getNodeStatus" ]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  ldk-node-dash:
+    depends_on:
+      ldk-node-hack-server:
+        condition: service_healthy
+    build: ../ldk-node-hack-dash/.
+    ports:
+      - "8080:8080"
+    networks:
+      - bitcoin-electrs
 
 networks:
   bitcoin-electrs:

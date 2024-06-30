@@ -1,9 +1,10 @@
 use clap::{Parser, Subcommand};
 use client::ServerHackClient;
 use protos::{
-	Bolt11ReceiveRequest, CloseChannelRequest, ForceCloseChannelRequest, GetBalancesRequest,
-	GetNodeIdRequest, GetNodeStatusRequest, GetPaymentDetailsRequest, ListChannelsRequest,
-	OnchainReceiveRequest, OnchainSendRequest, OpenChannelRequest, PaymentsHistoryRequest,
+	Bolt11ReceiveRequest, Bolt11SendRequest, CloseChannelRequest, ForceCloseChannelRequest,
+	GetBalancesRequest, GetNodeIdRequest, GetNodeStatusRequest, GetPaymentDetailsRequest,
+	ListChannelsRequest, OnchainReceiveRequest, OnchainSendRequest, OpenChannelRequest,
+	PaymentsHistoryRequest,
 };
 
 #[derive(Parser, Debug)]
@@ -28,6 +29,10 @@ enum Commands {
 	Bolt11Receive {
 		description: String,
 		expiry_secs: u32,
+		amount_msat: Option<u64>,
+	},
+	Bolt11Send {
+		invoice: String,
 		amount_msat: Option<u64>,
 	},
 	NodeBalances,
@@ -155,10 +160,20 @@ async fn main() {
 				.await
 			{
 				Ok(response) => {
-					println!("Payment details: {:?}", response);
+					println!("New invoice: {:?}", response);
 				},
 				Err(e) => {
-					eprintln!("Error getting payment details: {:?}", e);
+					eprintln!("Error getting invoice: {:?}", e);
+				},
+			};
+		},
+		Commands::Bolt11Send { invoice, amount_msat } => {
+			match client.bolt11_send(Bolt11SendRequest { invoice, amount_msat }).await {
+				Ok(response) => {
+					println!("Sent BOLT11 payment: {:?}", response);
+				},
+				Err(e) => {
+					eprintln!("Error sending BOLT11 payment: {:?}", e);
 				},
 			};
 		},

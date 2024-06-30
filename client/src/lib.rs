@@ -4,12 +4,13 @@ use crate::error::ServerHackError;
 use prost::Message;
 
 use protos::{
-	Bolt11ReceiveRequest, Bolt11ReceiveResponse, CloseChannelRequest, CloseChannelResponse,
-	ForceCloseChannelRequest, ForceCloseChannelResponse, GetBalancesRequest, GetBalancesResponse,
-	GetNodeIdRequest, GetNodeIdResponse, GetNodeStatusRequest, GetNodeStatusResponse,
-	GetPaymentDetailsRequest, GetPaymentDetailsResponse, ListChannelsRequest, ListChannelsResponse,
-	OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse,
-	OpenChannelRequest, OpenChannelResponse, PaymentsHistoryRequest, PaymentsHistoryResponse,
+	Bolt11ReceiveRequest, Bolt11ReceiveResponse, Bolt11SendRequest, Bolt11SendResponse,
+	CloseChannelRequest, CloseChannelResponse, ForceCloseChannelRequest, ForceCloseChannelResponse,
+	GetBalancesRequest, GetBalancesResponse, GetNodeIdRequest, GetNodeIdResponse,
+	GetNodeStatusRequest, GetNodeStatusResponse, GetPaymentDetailsRequest,
+	GetPaymentDetailsResponse, ListChannelsRequest, ListChannelsResponse, OnchainReceiveRequest,
+	OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, OpenChannelRequest,
+	OpenChannelResponse, PaymentsHistoryRequest, PaymentsHistoryResponse,
 };
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
@@ -18,9 +19,10 @@ const APPLICATION_OCTET_STREAM: &str = "application/octet-stream";
 
 const GET_NODE_ID_PATH: &str = "getNodeId";
 const GET_NODE_STATUS_PATH: &str = "getNodeStatus";
-const ONCHAIN_RECEIVE: &str = "onchain/receive";
-const ONCHAIN_SEND: &str = "onchain/send";
-const BOLT11_RECEIVE: &str = "bolt11/receive";
+const ONCHAIN_RECEIVE_PATH: &str = "onchain/receive";
+const ONCHAIN_SEND_PATH: &str = "onchain/send";
+const BOLT11_RECEIVE_PATH: &str = "bolt11/receive";
+const BOLT11_SEND_PATH: &str = "bolt11/send";
 const GET_NODE_BALANCES_PATH: &str = "getNodeBalances";
 const PAYMENTS_HISTORY_PATH: &str = "listPaymentsHistory";
 const GET_PAYMENT_DETAILS_PATH: &str = "getPaymentDetails";
@@ -57,21 +59,28 @@ impl ServerHackClient {
 	pub async fn get_new_funding_address(
 		&self, request: OnchainReceiveRequest,
 	) -> Result<OnchainReceiveResponse, ServerHackError> {
-		let url = format!("http://{}/{ONCHAIN_RECEIVE}", self.base_url);
+		let url = format!("http://{}/{ONCHAIN_RECEIVE_PATH}", self.base_url);
 		self.post_request(&request, &url).await
 	}
 
 	pub async fn send_onchain(
 		&self, request: OnchainSendRequest,
 	) -> Result<OnchainSendResponse, ServerHackError> {
-		let url = format!("http://{}/{ONCHAIN_SEND}", self.base_url);
+		let url = format!("http://{}/{ONCHAIN_SEND_PATH}", self.base_url);
 		self.post_request(&request, &url).await
 	}
 
 	pub async fn bolt11_receive(
 		&self, request: Bolt11ReceiveRequest,
 	) -> Result<Bolt11ReceiveResponse, ServerHackError> {
-		let url = format!("http://{}/{BOLT11_RECEIVE}", self.base_url);
+		let url = format!("http://{}/{BOLT11_RECEIVE_PATH}", self.base_url);
+		self.post_request(&request, &url).await
+	}
+
+	pub async fn bolt11_send(
+		&self, request: Bolt11SendRequest,
+	) -> Result<Bolt11SendResponse, ServerHackError> {
+		let url = format!("http://{}/{BOLT11_SEND_PATH}", self.base_url);
 		self.post_request(&request, &url).await
 	}
 

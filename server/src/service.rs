@@ -2,6 +2,7 @@ use ldk_node::bitcoin::secp256k1::PublicKey;
 use ldk_node::bitcoin::Address;
 use ldk_node::lightning::chain::BestBlock;
 use ldk_node::lightning::ln::msgs::SocketAddress;
+use ldk_node::lightning_invoice::Bolt11Invoice;
 use ldk_node::payment::{PaymentDetails, PaymentDirection, PaymentKind, PaymentStatus};
 use ldk_node::LightningBalance::{
 	ClaimableAwaitingConfirmations, ClaimableOnChannelClose, ContentiousClaimable,
@@ -24,20 +25,21 @@ use hyper::{Request, Response, StatusCode};
 use std::sync::Arc;
 
 use protos::{
-	lightning_balance, pending_sweep_balance, Bolt11ReceiveRequest, Bolt11ReceiveResponse, Channel,
-	CloseChannelRequest, CloseChannelResponse, ForceCloseChannelRequest, ForceCloseChannelResponse,
-	GetBalancesRequest, GetBalancesResponse, GetNodeIdRequest, GetNodeIdResponse,
-	GetNodeStatusRequest, GetNodeStatusResponse, GetPaymentDetailsRequest, ListChannelsRequest,
-	ListChannelsResponse, OnchainReceiveRequest, OnchainReceiveResponse, OnchainSendRequest,
-	OnchainSendResponse, OpenChannelRequest, OpenChannelResponse, Outpoint, PaymentsHistoryRequest,
-	PaymentsHistoryResponse,
+	lightning_balance, pending_sweep_balance, Bolt11ReceiveRequest, Bolt11ReceiveResponse,
+	Bolt11SendRequest, Bolt11SendResponse, Channel, CloseChannelRequest, CloseChannelResponse,
+	ForceCloseChannelRequest, ForceCloseChannelResponse, GetBalancesRequest, GetBalancesResponse,
+	GetNodeIdRequest, GetNodeIdResponse, GetNodeStatusRequest, GetNodeStatusResponse,
+	GetPaymentDetailsRequest, ListChannelsRequest, ListChannelsResponse, OnchainReceiveRequest,
+	OnchainReceiveResponse, OnchainSendRequest, OnchainSendResponse, OpenChannelRequest,
+	OpenChannelResponse, Outpoint, PaymentsHistoryRequest, PaymentsHistoryResponse,
 };
 
 const GET_NODE_ID_PATH: &str = "/getNodeId";
 const GET_NODE_STATUS_PATH: &str = "/getNodeStatus";
-const ONCHAIN_RECEIVE: &str = "/onchain/receive";
-const ONCHAIN_SEND: &str = "/onchain/send";
-const BOLT11_RECEIVE: &str = "/bolt11/receive";
+const ONCHAIN_RECEIVE_PATH: &str = "/onchain/receive";
+const ONCHAIN_SEND_PATH: &str = "/onchain/send";
+const BOLT11_RECEIVE_PATH: &str = "/bolt11/receive";
+const BOLT11_SEND_PATH: &str = "/bolt11/send";
 const GET_NODE_BALANCES_PATH: &str = "/getNodeBalances";
 const PAYMENTS_HISTORY_PATH: &str = "/listPaymentsHistory";
 const GET_PAYMENT_DETAILS_PATH: &str = "/getPaymentDetails";
@@ -75,9 +77,12 @@ impl Service<Req> for NodeService {
 			GET_NODE_BALANCES_PATH => {
 				Box::pin(handle_request(node, req, handle_get_balances_request))
 			},
-			ONCHAIN_RECEIVE => Box::pin(handle_request(node, req, handle_onchain_receive)),
-			ONCHAIN_SEND => Box::pin(handle_request(node, req, handle_onchain_send)),
-			BOLT11_RECEIVE => Box::pin(handle_request(node, req, handle_bolt11_receive_request)),
+			ONCHAIN_RECEIVE_PATH => Box::pin(handle_request(node, req, handle_onchain_receive)),
+			ONCHAIN_SEND_PATH => Box::pin(handle_request(node, req, handle_onchain_send)),
+			BOLT11_RECEIVE_PATH => {
+				Box::pin(handle_request(node, req, handle_bolt11_receive_request))
+			},
+			BOLT11_SEND_PATH => Box::pin(handle_request(node, req, handle_bolt11_send_request)),
 			LIST_CHANNELS_PATH => Box::pin(handle_request(node, req, handle_list_channels_request)),
 			OPEN_CHANNEL_PATH => Box::pin(handle_request(node, req, handle_open_channel)),
 			CLOSE_CHANNEL_PATH => Box::pin(handle_request(node, req, handle_close_channel)),
@@ -366,6 +371,21 @@ fn handle_bolt11_receive_request(
 	};
 
 	let response = Bolt11ReceiveResponse { invoice: invoice.to_string() };
+	Ok(response)
+}
+
+fn handle_bolt11_send_request(
+	node: Arc<Node>, request: Bolt11SendRequest,
+) -> Result<Bolt11SendResponse, ldk_node::NodeError> {
+	let invoice = Bolt11Invoice::from_str(&request.invoice)
+		.map_err(|_| ldk_node::NodeError::InvalidInvoice)?;
+	let payment_id = match request.amount_msat {
+		Some(amount_msat) => node.bolt11_payment().send_using_amount(&invoice, amount_msat)?,
+		None => node.bolt11_payment().send(&invoice)?,
+	};
+
+	let response =
+		Bolt11SendResponse { payment_id: Some(protos::PaymentId { data: payment_id.0.to_vec() }) };
 	Ok(response)
 }
 
